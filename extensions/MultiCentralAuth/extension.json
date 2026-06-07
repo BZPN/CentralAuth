@@ -28,7 +28,8 @@
 				"NamespaceInfo",
 				"UserFactory",
 				"UserNameUtils",
-				"MultiCentralAuth.ExternalCAProvider"
+				"MultiCentralAuth.ExternalCAProvider",
+				"UserGroupManager"
 			]
 		},
 		"CentralAuthMerge": {

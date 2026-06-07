@@ -9,6 +9,7 @@ use MediaWiki\MainConfigNames;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\NamespaceInfo;
 use MediaWiki\User\UserFactory;
+use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
 use MediaWiki\WikiMap\WikiMap;
 use Wikimedia\Rdbms\IConnectionProvider;
@@ -21,6 +22,7 @@ class SpecialCentralAuth extends SpecialPage {
 	private UserFactory $userFactory;
 	private UserNameUtils $userNameUtils;
 	private ExternalCAProvider $externalCAProvider;
+	private UserGroupManager $userGroupManager;
 
 	public function __construct(
 		CommentFormatter $commentFormatter,
@@ -28,7 +30,8 @@ class SpecialCentralAuth extends SpecialPage {
 		NamespaceInfo $namespaceInfo,
 		UserFactory $userFactory,
 		UserNameUtils $userNameUtils,
-		ExternalCAProvider $externalCAProvider
+		ExternalCAProvider $externalCAProvider,
+		UserGroupManager $userGroupManager
 	) {
 		parent::__construct( 'CentralAuth' );
 		$this->commentFormatter = $commentFormatter;
@@ -37,6 +40,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->userFactory = $userFactory;
 		$this->userNameUtils = $userNameUtils;
 		$this->externalCAProvider = $externalCAProvider;
+		$this->userGroupManager = $userGroupManager;
 	}
 
 	public function execute( $subpage ) {
@@ -65,7 +69,7 @@ class SpecialCentralAuth extends SpecialPage {
 
 		// 2. Wikimedia Data
 		if ( $externalUsernames['wm'] ) {
-			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://www.wikimedia.org/w/api.php', $externalUsernames['wm'] );
+			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] );
 			if ( $wmData ) {
 				$this->showExternalData( $wmData, 'Wikimedia' );
 			}
@@ -109,7 +113,7 @@ class SpecialCentralAuth extends SpecialPage {
 					'attachedMethod' => 'home',
 					'editCount' => $user->getEditCount(),
 					'attachedTimestamp' => $user->getRegistration(),
-					'groups' => $user->getGroups(),
+					'groups' => $this->userGroupManager->getUserGroups( $user ),
 					'blocked' => $user->isBlocked(),
 				];
 			} else {
