@@ -2,7 +2,7 @@
 
 namespace MediaWiki\Extension\MultiCentralAuth\Special;
 
-use MediaWiki\Block\BlockLookup;
+use MediaWiki\Block\BlockManager;
 use MediaWiki\CommentFormatter\CommentFormatter;
 use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
 use MediaWiki\Html\Html;
@@ -26,7 +26,7 @@ class SpecialCentralAuth extends SpecialPage {
 	private UserNameUtils $userNameUtils;
 	private ExternalCAProvider $externalCAProvider;
 	private UserGroupManager $userGroupManager;
-	private BlockLookup $blockLookup;
+	private BlockManager $blockManager;
 	private UserEditCountLookup $userEditCountLookup;
 	private UserRegistrationLookup $userRegistrationLookup;
 
@@ -38,7 +38,7 @@ class SpecialCentralAuth extends SpecialPage {
 		UserNameUtils $userNameUtils,
 		ExternalCAProvider $externalCAProvider,
 		UserGroupManager $userGroupManager,
-		BlockLookup $blockLookup,
+		BlockManager $blockManager,
 		UserEditCountLookup $userEditCountLookup,
 		UserRegistrationLookup $userRegistrationLookup
 	) {
@@ -50,7 +50,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->userNameUtils = $userNameUtils;
 		$this->externalCAProvider = $externalCAProvider;
 		$this->userGroupManager = $userGroupManager;
-		$this->blockLookup = $blockLookup;
+		$this->blockManager = $blockManager;
 		$this->userEditCountLookup = $userEditCountLookup;
 		$this->userRegistrationLookup = $userRegistrationLookup;
 	}
@@ -126,7 +126,7 @@ class SpecialCentralAuth extends SpecialPage {
 					'editCount' => $this->userEditCountLookup->getEditCount( $user ),
 					'attachedTimestamp' => $this->userRegistrationLookup->getRegistration( $user ),
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
-					'blocked' => (bool)$this->blockLookup->getBlock( $user ),
+					'blocked' => (bool)$this->blockManager->getBlock( $user ),
 				];
 			} else {
 				$rows[] = [

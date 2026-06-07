@@ -30,7 +30,7 @@
 				"UserNameUtils",
 				"MultiCentralAuth.ExternalCAProvider",
 				"UserGroupManager",
-				"BlockLookup",
+				"BlockManager",
 				"UserEditCountLookup",
 				"UserRegistrationLookup"
 			]
