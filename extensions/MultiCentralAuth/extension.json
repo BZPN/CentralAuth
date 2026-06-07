@@ -29,7 +29,10 @@
 				"UserFactory",
 				"UserNameUtils",
 				"MultiCentralAuth.ExternalCAProvider",
-				"UserGroupManager"
+				"UserGroupManager",
+				"BlockLookup",
+				"UserEditCountLookup",
+				"UserRegistrationLookup"
 			]
 		},
 		"CentralAuthMerge": {

@@ -2,12 +2,15 @@
 
 namespace MediaWiki\Extension\MultiCentralAuth\Special;
 
+use MediaWiki\Block\BlockLookup;
 use MediaWiki\CommentFormatter\CommentFormatter;
 use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
 use MediaWiki\Html\Html;
 use MediaWiki\MainConfigNames;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\NamespaceInfo;
+use MediaWiki\User\Registration\UserRegistrationLookup;
+use MediaWiki\User\UserEditCountLookup;
 use MediaWiki\User\UserFactory;
 use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
@@ -23,6 +26,9 @@ class SpecialCentralAuth extends SpecialPage {
 	private UserNameUtils $userNameUtils;
 	private ExternalCAProvider $externalCAProvider;
 	private UserGroupManager $userGroupManager;
+	private BlockLookup $blockLookup;
+	private UserEditCountLookup $userEditCountLookup;
+	private UserRegistrationLookup $userRegistrationLookup;
 
 	public function __construct(
 		CommentFormatter $commentFormatter,
@@ -31,7 +37,10 @@ class SpecialCentralAuth extends SpecialPage {
 		UserFactory $userFactory,
 		UserNameUtils $userNameUtils,
 		ExternalCAProvider $externalCAProvider,
-		UserGroupManager $userGroupManager
+		UserGroupManager $userGroupManager,
+		BlockLookup $blockLookup,
+		UserEditCountLookup $userEditCountLookup,
+		UserRegistrationLookup $userRegistrationLookup
 	) {
 		parent::__construct( 'CentralAuth' );
 		$this->commentFormatter = $commentFormatter;
@@ -41,6 +50,9 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->userNameUtils = $userNameUtils;
 		$this->externalCAProvider = $externalCAProvider;
 		$this->userGroupManager = $userGroupManager;
+		$this->blockLookup = $blockLookup;
+		$this->userEditCountLookup = $userEditCountLookup;
+		$this->userRegistrationLookup = $userRegistrationLookup;
 	}
 
 	public function execute( $subpage ) {
@@ -111,10 +123,10 @@ class SpecialCentralAuth extends SpecialPage {
 				$rows[] = [
 					'wiki' => $wikiId,
 					'attachedMethod' => 'home',
-					'editCount' => $user->getEditCount(),
-					'attachedTimestamp' => $user->getRegistration(),
+					'editCount' => $this->userEditCountLookup->getEditCount( $user ),
+					'attachedTimestamp' => $this->userRegistrationLookup->getRegistration( $user ),
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
-					'blocked' => $user->isBlocked(),
+					'blocked' => (bool)$this->blockLookup->getBlock( $user ),
 				];
 			} else {
 				$rows[] = [
