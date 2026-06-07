@@ -9,8 +9,6 @@ use MediaWiki\Html\Html;
 use MediaWiki\MainConfigNames;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\NamespaceInfo;
-use MediaWiki\User\Registration\UserRegistrationLookup;
-use MediaWiki\User\UserEditCountLookup;
 use MediaWiki\User\UserFactory;
 use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
@@ -27,8 +25,6 @@ class SpecialCentralAuth extends SpecialPage {
 	private ExternalCAProvider $externalCAProvider;
 	private UserGroupManager $userGroupManager;
 	private BlockManager $blockManager;
-	private UserEditCountLookup $userEditCountLookup;
-	private UserRegistrationLookup $userRegistrationLookup;
 
 	public function __construct(
 		CommentFormatter $commentFormatter,
@@ -38,9 +34,7 @@ class SpecialCentralAuth extends SpecialPage {
 		UserNameUtils $userNameUtils,
 		ExternalCAProvider $externalCAProvider,
 		UserGroupManager $userGroupManager,
-		BlockManager $blockManager,
-		UserEditCountLookup $userEditCountLookup,
-		UserRegistrationLookup $userRegistrationLookup
+		BlockManager $blockManager
 	) {
 		parent::__construct( 'CentralAuth' );
 		$this->commentFormatter = $commentFormatter;
@@ -51,8 +45,6 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->externalCAProvider = $externalCAProvider;
 		$this->userGroupManager = $userGroupManager;
 		$this->blockManager = $blockManager;
-		$this->userEditCountLookup = $userEditCountLookup;
-		$this->userRegistrationLookup = $userRegistrationLookup;
 	}
 
 	public function execute( $subpage ) {
@@ -120,11 +112,18 @@ class SpecialCentralAuth extends SpecialPage {
 			// In a real multi-wiki setup we would fetch data from other DBs.
 			// Here we can only reliably show data for the current wiki.
 			if ( $wikiId === $currentWiki ) {
+				$dbr = $this->dbProvider->getReplicaDatabase();
+				$userData = $dbr->newSelectQueryBuilder()
+					->select( [ 'user_editcount', 'user_registration' ] )
+					->from( 'user' )
+					->where( [ 'user_id' => $user->getId() ] )
+					->fetchRow();
+
 				$rows[] = [
 					'wiki' => $wikiId,
 					'attachedMethod' => 'home',
-					'editCount' => $this->userEditCountLookup->getEditCount( $user ),
-					'attachedTimestamp' => $this->userRegistrationLookup->getRegistration( $user ),
+					'editCount' => $userData ? (int)$userData->user_editcount : 0,
+					'attachedTimestamp' => $userData ? $userData->user_registration : '',
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
 					'blocked' => (bool)$this->blockManager->getBlock( $user ),
 				];
