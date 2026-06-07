@@ -125,7 +125,7 @@ class SpecialCentralAuth extends SpecialPage {
 					'editCount' => $userData ? (int)$userData->user_editcount : 0,
 					'attachedTimestamp' => $userData ? $userData->user_registration : '',
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
-					'blocked' => (bool)$this->blockManager->getBlock( $user ),
+					'blocked' => (bool)$this->blockManager->getBlock( $user, $this->getAuthority() ),
 				];
 			} else {
 				$rows[] = [
