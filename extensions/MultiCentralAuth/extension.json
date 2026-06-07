@@ -1,0 +1,79 @@
+{
+	"name": "MultiCentralAuth",
+	"version": "1.0.0",
+	"author": "Jules",
+	"url": "https://www.mediawiki.org/wiki/Extension:MultiCentralAuth",
+	"descriptionmsg": "multicentralauth-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "specialpage",
+	"requires": {
+		"MediaWiki": ">= 1.45.1"
+	},
+	"AvailableRights": [
+		"ca-merge",
+		"ca-manage"
+	],
+	"GroupPermissions": {
+		"sysop": {
+			"ca-merge": true,
+			"ca-manage": true
+		}
+	},
+	"SpecialPages": {
+		"CentralAuth": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuth",
+			"services": [
+				"CommentFormatter",
+				"ConnectionProvider",
+				"NamespaceInfo",
+				"UserFactory",
+				"UserNameUtils",
+				"MultiCentralAuth.ExternalCAProvider"
+			]
+		},
+		"CentralAuthMerge": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuthMerge",
+			"services": [
+				"ConnectionProvider",
+				"UserNameUtils"
+			]
+		},
+		"CentralAuthUnmerge": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuthUnmerge",
+			"services": [
+				"ConnectionProvider",
+				"UserNameUtils"
+			]
+		},
+		"ManageCA": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialManageCA",
+			"services": [
+				"ConnectionProvider"
+			]
+		}
+	},
+	"MessagesDirs": {
+		"MultiCentralAuth": [
+			"i18n"
+		]
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\MultiCentralAuth\\": "includes/"
+	},
+	"ResourceModules": {
+		"ext.multicentralauth.styles": {
+			"styles": "resources/main.less"
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "",
+		"remoteExtPath": "MultiCentralAuth"
+	},
+	"ServiceWiringFiles": [
+		"includes/ServiceWiring.php"
+	],
+	"Hooks": {
+		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onLoadExtensionSchemaUpdates"
+	},
+	"manifest_version": 2
+}

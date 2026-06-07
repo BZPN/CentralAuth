@@ -1,0 +1,34 @@
+{
+	"@metadata": {
+		"authors": [
+			"Jules"
+		]
+	},
+	"multicentralauth-desc": "MultiCentralAuth - strona specjalna wyświetlająca dane o kontach uniwersalnych z wielu źródeł.",
+	"centralauth": "Zarządzanie kontem uniwersalnym",
+	"centralauth-admin-list-localwiki": "Wiki",
+	"centralauth-admin-list-attached-on": "Dołączono",
+	"centralauth-admin-list-method": "Metoda",
+	"centralauth-admin-list-blocked": "Zablokowany",
+	"centralauth-admin-list-editcount": "Liczba edycji",
+	"centralauth-admin-list-groups": "Grupy",
+	"centralauth-admin-yes": "Tak",
+	"centralauth-admin-notblocked": "Nie",
+	"mca-target-label": "Nazwa użytkownika:",
+	"mca-submit": "Pokaż",
+	"mca-header-local": "Lokalny CentralAuth",
+	"mca-header-external": "CentralAuth na $1",
+	"mca-merge-local-user": "Lokalna nazwa użytkownika:",
+	"mca-merge-wm-user": "Nazwa użytkownika na Wikimedia:",
+	"mca-merge-wm-user-help": "Opcjonalna nazwa użytkownika na projektach Wikimedia.",
+	"mca-merge-mh-user": "Nazwa użytkownika na Miraheze:",
+	"mca-merge-mh-user-help": "Opcjonalna nazwa użytkownika na projektach Miraheze.",
+	"mca-unmerge-local-user": "Lokalna nazwa użytkownika do rozłączenia:",
+	"mca-manage-wiki-id": "ID wiki:",
+	"mca-manage-action-add": "Dodaj",
+	"mca-manage-action-remove": "Usuń",
+	"mca-manage-current-wikis": "Aktualnie dołączone wiki:",
+	"mca-manage-no-wikis": "Brak dołączonych wiki.",
+	"mca-error-invalid-user": "Nieprawidłowa nazwa użytkownika.",
+	"mca-error-user-not-found": "Użytkownik nie został znaleziony."
+}

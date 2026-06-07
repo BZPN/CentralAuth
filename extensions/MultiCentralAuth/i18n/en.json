@@ -1,0 +1,34 @@
+{
+	"@metadata": {
+		"authors": [
+			"Jules"
+		]
+	},
+	"multicentralauth-desc": "MultiCentralAuth - a special page that displays central authentication data from multiple sources.",
+	"centralauth": "Central authentication",
+	"centralauth-admin-list-localwiki": "Wiki",
+	"centralauth-admin-list-attached-on": "Attached on",
+	"centralauth-admin-list-method": "Method",
+	"centralauth-admin-list-blocked": "Blocked",
+	"centralauth-admin-list-editcount": "Edit count",
+	"centralauth-admin-list-groups": "Groups",
+	"centralauth-admin-yes": "Yes",
+	"centralauth-admin-notblocked": "No",
+	"mca-target-label": "User name:",
+	"mca-submit": "Show",
+	"mca-header-local": "Local CentralAuth",
+	"mca-header-external": "CentralAuth on $1",
+	"mca-merge-local-user": "Local username:",
+	"mca-merge-wm-user": "Wikimedia username:",
+	"mca-merge-wm-user-help": "Optional username on Wikimedia projects.",
+	"mca-merge-mh-user": "Miraheze username:",
+	"mca-merge-mh-user-help": "Optional username on Miraheze projects.",
+	"mca-unmerge-local-user": "Local username to unmerge:",
+	"mca-manage-wiki-id": "Wiki ID:",
+	"mca-manage-action-add": "Add",
+	"mca-manage-action-remove": "Remove",
+	"mca-manage-current-wikis": "Currently attached wikis:",
+	"mca-manage-no-wikis": "No wikis attached.",
+	"mca-error-invalid-user": "Invalid username.",
+	"mca-error-user-not-found": "User not found."
+}
