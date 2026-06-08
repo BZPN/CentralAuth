@@ -19,8 +19,10 @@ class Hooks {
 	}
 
 	public static function onContributionsToolLinks( $id, $user, &$toolLinks ) {
+		// In some versions $user is a Title, in others a User.
+		$target = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
 		$toolLinks[] = Html::element( 'a', [
-			'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $user->getName() )->getFullURL(),
+			'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $target )->getFullURL(),
 			'class' => 'mw-contributions-link-centralauth'
 		], wfMessage( 'mca-global-account-info' )->text() );
 	}
@@ -85,7 +87,7 @@ class Hooks {
 				'request-id' => $requestId,
 				'status' => $status,
 			],
-			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newUnknown(),
+			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newAnonymous(),
 			'targets' => [ $user ],
 		] );
 	}

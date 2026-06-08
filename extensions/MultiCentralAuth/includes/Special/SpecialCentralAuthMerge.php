@@ -95,15 +95,21 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			$id = $farm['id'];
 			$extUser = $formData["{$id}_user"] ?? null;
 			if ( $extUser ) {
-				$dbw->upsert(
+				$dbw->delete(
+					'mca_external_userids',
+					[
+						'meu_user_id' => $localUserId,
+						'meu_farm_id' => $id,
+					],
+					__METHOD__
+				);
+				$dbw->insert(
 					'mca_external_userids',
 					[
 						'meu_user_id' => $localUserId,
 						'meu_farm_id' => $id,
 						'meu_external_username' => $extUser,
 					],
-					[ 'meu_user_id', 'meu_farm_id' ],
-					[ 'meu_external_username' => $extUser ],
 					__METHOD__
 				);
 				$logData[] = "$id: $extUser";

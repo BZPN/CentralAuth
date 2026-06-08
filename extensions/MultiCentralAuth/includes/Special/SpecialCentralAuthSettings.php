@@ -44,11 +44,11 @@ class SpecialCentralAuthSettings extends SpecialPage {
 
 		$table = Html::openElement( 'table', [ 'class' => 'wikitable', 'style' => 'width: 100%; margin-top: 1em;' ] );
 		$table .= Html::openElement( 'tr' ) .
-			Html::element( 'th', [], 'ID' ) .
-			Html::element( 'th', [], 'Name' ) .
-			Html::element( 'th', [], 'API URL' ) .
-			Html::element( 'th', [], 'CentralAuth' ) .
-			Html::element( 'th', [], 'Actions' ) .
+			Html::element( 'th', [], $this->msg( 'mca-settings-id' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-settings-name' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-settings-api-url' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-settings-centralauth' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-settings-actions' )->text() ) .
 			Html::closeElement( 'tr' );
 
 		foreach ( $farms as $farm ) {
