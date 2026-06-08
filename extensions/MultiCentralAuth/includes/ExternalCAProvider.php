@@ -114,10 +114,13 @@ class ExternalCAProvider {
 			return null;
 		}
 
+		$groups = $user['groups'] ?? [];
+		$filteredGroups = array_values( array_diff( $groups, [ '*', 'user', 'autoconfirmed' ] ) );
+
 		return [
 			'editcount' => $user['editcount'] ?? 0,
 			'registration' => $user['registration'] ?? '',
-			'groups' => $user['groups'] ?? [],
+			'groups' => $filteredGroups,
 			'blocked' => isset( $user['blockid'] ),
 		];
 	}
