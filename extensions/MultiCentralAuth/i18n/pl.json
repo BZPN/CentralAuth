@@ -5,10 +5,12 @@
 		]
 	},
 	"multicentralauth-desc": "MultiCentralAuth - strona specjalna wyświetlająca dane o kontach uniwersalnych z wielu źródeł.",
-	"centralauth": "Zarządzanie kontem uniwersalnym",
+	"centralauth": "Informacje o globalnych kontach użytkownika",
 	"centralauthmerge": "Łączenie kont CentralAuth",
 	"centralauthunmerge": "Rozłączanie kont CentralAuth",
 	"manageca": "Zarządzaj moim CentralAuth",
+	"right-ca-merge": "Łączenie kont CentralAuth",
+	"right-ca-manage": "Zarządzanie lokalnymi załącznikami CentralAuth",
 	"action-ca-merge": "łączyć konta CentralAuth",
 	"action-ca-manage": "zarządzać lokalnymi załącznikami CentralAuth",
 	"centralauth-admin-list-localwiki": "Wiki",

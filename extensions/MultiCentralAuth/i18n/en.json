@@ -5,10 +5,12 @@
 		]
 	},
 	"multicentralauth-desc": "MultiCentralAuth - a special page that displays central authentication data from multiple sources.",
-	"centralauth": "Central authentication",
+	"centralauth": "User global accounts information",
 	"centralauthmerge": "Merge CentralAuth accounts",
 	"centralauthunmerge": "Unmerge CentralAuth accounts",
 	"manageca": "Manage my CentralAuth",
+	"right-ca-merge": "Merge CentralAuth accounts",
+	"right-ca-manage": "Manage CentralAuth local attachments",
 	"action-ca-merge": "merge CentralAuth accounts",
 	"action-ca-manage": "manage your CentralAuth local attachments",
 	"centralauth-admin-list-localwiki": "Wiki",

@@ -13,6 +13,10 @@ use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
 use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
+use OOUI\FieldsetLayout;
+use OOUI\HtmlSnippet;
+use OOUI\PanelLayout;
+use OOUI\Widget;
 use Wikimedia\Rdbms\IConnectionProvider;
 
 class SpecialCentralAuth extends SpecialPage {
@@ -90,9 +94,19 @@ class SpecialCentralAuth extends SpecialPage {
 	private function showUsernameForm( $default = '' ) {
 		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
 			Html::rawElement( 'div', [],
-				Html::element( 'label', [ 'for' => 'mca-target' ], $this->msg( 'mca-target-label' )->text() ) . ' ' .
-				Html::input( 'target', $default, 'text', [ 'id' => 'mca-target', 'class' => 'mw-ui-input mw-ui-input-inline', 'size' => 40 ] ) . ' ' .
-				Html::submitButton( $this->msg( 'mca-header-view' )->text(), [ 'id' => 'mca-submit', 'class' => 'mw-ui-button mw-ui-progressive' ] )
+				Html::rawElement( 'label', [ 'for' => 'mca-target', 'class' => 'mw-ui-message' ],
+					$this->msg( 'mca-target-label' )->text() . ' <span class="mw-ui-required">*</span>'
+				) . ' ' .
+				Html::input( 'target', $default, 'text', [
+					'id' => 'mca-target',
+					'class' => 'mw-ui-input mw-ui-input-inline',
+					'size' => 40,
+					'required' => 'required'
+				] ) . ' ' .
+				Html::submitButton( $this->msg( 'mca-header-view' )->text(), [
+					'id' => 'mca-submit',
+					'class' => 'mw-ui-button mw-ui-progressive mw-ui-big'
+				] )
 			)
 		);
 
@@ -182,12 +196,14 @@ class SpecialCentralAuth extends SpecialPage {
 		$prettyReg = '';
 		if ( $reg ) {
 			$ts = new MWTimestamp( $reg );
-			$prettyReg = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() ) . ' (' . $lang->getHumanTimestamp( $ts ) . ')';
+			$date = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() );
+			$ago = $lang->getHumanTimestamp( $ts, null, $this->getUser() );
+			$prettyReg = $date . ' (' . $ago . ')';
 		}
 
 		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
 		$html .= Html::openElement( 'ul' );
-		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-username', $username )->parse() );
+		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-username', htmlspecialchars( $username ) )->parse() );
 		if ( $prettyReg ) {
 			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-registered', $prettyReg )->parse() );
 		}

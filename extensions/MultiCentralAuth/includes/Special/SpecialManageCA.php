@@ -89,7 +89,9 @@ class SpecialManageCA extends SpecialPage {
 		$htmlForm->setSubmitTextMsg( 'mca-manage-action-add' );
 
 		// Capture form output
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-manage-action-add' ) );
+		$htmlForm->prepareForm();
+		$status = $htmlForm->tryAuthorizedSubmit();
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'mca-manage-action-add' ) );
 	}
 
 	public function onSubmit( array $formData ) {
