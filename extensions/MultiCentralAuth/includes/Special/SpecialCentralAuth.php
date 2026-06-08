@@ -6,6 +6,7 @@ use MediaWiki\Block\BlockManager;
 use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
 use MediaWiki\Html\Html;
 use MediaWiki\MainConfigNames;
+use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
 use MediaWiki\User\UserFactory;
@@ -54,6 +55,7 @@ class SpecialCentralAuth extends SpecialPage {
 			'mediawiki.ui.input',
 			'mediawiki.ui.button',
 			'mediawiki.ui.vform',
+			'mediawiki.widgets.styles',
 			'ext.multicentralauth.styles'
 		] );
 		$this->getOutput()->addModules( 'ext.multicentralauth.js' );
@@ -110,25 +112,22 @@ class SpecialCentralAuth extends SpecialPage {
 	}
 
 	private function showUsernameForm( $default = '' ) {
-		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get', 'class' => 'mw-ui-vform' ],
-			Html::rawElement( 'div', [ 'class' => 'mw-ui-vform-field' ],
-				Html::rawElement( 'label', [ 'for' => 'mca-target' ],
-					$this->msg( 'mca-target-label' )->text() . ' <span class="mw-ui-required">*</span>'
-				) .
-				Html::input( 'target', $default, 'text', [
-					'id' => 'mca-target',
-					'class' => 'mw-ui-input',
-					'size' => 40,
-					'required' => 'required'
-				] )
-			) .
-			Html::submitButton( $this->msg( 'mca-view-user-info' )->text(), [
-				'id' => 'mca-submit',
-				'class' => 'mw-ui-button mw-ui-progressive'
-			] )
-		);
+		$formDescriptor = [
+			'target' => [
+				'type' => 'user',
+				'name' => 'target',
+				'label-message' => 'mca-target-label',
+				'required' => true,
+				'default' => $default,
+			],
+		];
 
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $form, 'mca-header-view' ) );
+		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+		$htmlForm->setMethod( 'get' );
+		$htmlForm->setSubmitTextMsg( 'mca-view-user-info' );
+		$htmlForm->prepareForm();
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-header-view' ) );
 	}
 
 	private function showLocalData( $user, array $manualWikis ) {

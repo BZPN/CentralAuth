@@ -180,6 +180,10 @@ class SpecialManageCA extends SpecialPage {
 		$attachedWikis = [];
 
 		foreach ( $merged as $m ) {
+			$parsedUrl = parse_url( $m['url'] );
+			$host = $parsedUrl['host'] ?? null;
+			$isManual = $host && in_array( $host, $manualWikis );
+
 			$rows[] = [
 				'wiki' => $m['wiki'],
 				'url' => $m['url'],
@@ -188,11 +192,10 @@ class SpecialManageCA extends SpecialPage {
 				'attachedTimestamp' => $m['timestamp'],
 				'groups' => $m['groups'] ?? [],
 				'blocked' => isset( $m['blocked'] ),
-				'manual' => false,
+				'manual' => $isManual,
 			];
-			$parsedUrl = parse_url( $m['url'] );
-			if ( isset( $parsedUrl['host'] ) ) {
-				$attachedWikis[] = $parsedUrl['host'];
+			if ( $host ) {
+				$attachedWikis[] = $host;
 			}
 		}
 
