@@ -13,6 +13,7 @@ use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
 use Wikimedia\Rdbms\IConnectionProvider;
 use MediaWiki\Html\Html;
+use MediaWiki\Html\Xml;
 
 class SpecialManageCA extends SpecialPage {
 
@@ -41,6 +42,9 @@ class SpecialManageCA extends SpecialPage {
 			'mediawiki.codex.messagebox.styles',
 			'oojs-ui-core.styles',
 			'oojs-ui-widgets.styles',
+			'mediawiki.ui.input',
+			'mediawiki.ui.button',
+			'mediawiki.ui.vform',
 			'ext.multicentralauth.styles'
 		] );
 
@@ -52,31 +56,28 @@ class SpecialManageCA extends SpecialPage {
 			$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
 		}
 
-		$removeWiki = $this->getRequest()->getVal( 'remove' );
-		if ( $removeWiki ) {
+		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
+
+		// Bulk removal logic
+		$removeWikis = $this->getRequest()->getArray( 'remove_wikis' );
+		if ( $this->getRequest()->wasPosted() && $removeWikis && $this->getUser()->matchEditToken( $this->getRequest()->getVal( 'wpEditToken' ) ) ) {
 			$dbw->delete(
 				'mca_local_attachments',
 				[
 					'mla_user_id' => $user->getId(),
-					'mla_wiki_id' => $removeWiki,
+					'mla_wiki_id' => $removeWikis,
 				],
 				__METHOD__
 			);
-			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success', $removeWiki )->parse() ) );
+			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success' )->parse() ) );
+			$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+			return;
 		}
 
-		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
+		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
+		$this->getOutput()->addHTML( Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() ) );
 
-		// 1. Local Wiki Data
-		$localManual = [];
-		foreach ( $manualWikis as $wiki ) {
-			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'local' ) {
-				$localManual[] = $wiki;
-			}
-		}
-		$this->showLocalData( $user, $localManual );
-
-		// 2. Wikimedia Data
+		// 1. Wikimedia Data
 		$wmManual = [];
 		foreach ( $manualWikis as $wiki ) {
 			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'wm' ) {
@@ -88,7 +89,7 @@ class SpecialManageCA extends SpecialPage {
 			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
 		}
 
-		// 3. Miraheze Data
+		// 2. Miraheze Data
 		$mhManual = [];
 		foreach ( $manualWikis as $wiki ) {
 			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'mh' ) {
@@ -99,6 +100,16 @@ class SpecialManageCA extends SpecialPage {
 			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
 			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
 		}
+
+		if ( $wmManual || $mhManual ) {
+			$this->getOutput()->addHTML( Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
+				'name' => 'delete_selected',
+				'class' => 'mw-ui-button mw-ui-destructive',
+				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
+			] ) );
+		}
+
+		$this->getOutput()->addHTML( Html::closeElement( 'form' ) );
 
 		// Instructions
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout(
@@ -159,55 +170,8 @@ class SpecialManageCA extends SpecialPage {
 		);
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-merged-success', $hostname )->parse() ) );
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
 		return true;
-	}
-
-	private function showLocalData( $user, array $manualWikis ) {
-		$localWikiName = $this->getConfig()->get( MainConfigNames::Sitename );
-		$currentWikiId = WikiMap::getCurrentWikiId();
-
-		$dbr = $this->dbProvider->getReplicaDatabase();
-		$userData = $dbr->newSelectQueryBuilder()
-			->select( [ 'user_editcount', 'user_registration' ] )
-			->from( 'user' )
-			->where( [ 'user_id' => $user->getId() ] )
-			->fetchRow();
-
-		$reg = $userData ? $userData->user_registration : '';
-		$editCount = $userData ? (int)$userData->user_editcount : 0;
-
-		$rows = [];
-		$rows[] = [
-			'wiki' => $currentWikiId,
-			'attachedMethod' => 'home',
-			'editCount' => $editCount,
-			'attachedTimestamp' => $reg,
-			'groups' => $this->userGroupManager->getUserGroups( $user ),
-			'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
-			'manual' => false,
-		];
-
-		foreach ( $manualWikis as $wikiHost ) {
-			if ( $wikiHost === $currentWikiId ) {
-				continue;
-			}
-			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() );
-			if ( $metadata ) {
-				$rows[] = [
-					'wiki' => $wikiHost,
-					'url' => "https://$wikiHost/",
-					'attachedMethod' => 'local',
-					'editCount' => $metadata['editcount'],
-					'attachedTimestamp' => $metadata['registration'],
-					'groups' => $metadata['groups'],
-					'blocked' => $metadata['blocked'],
-					'manual' => true,
-				];
-			}
-		}
-
-		$table = $this->renderTable( $rows, $user->getName() );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $localWikiName ] ) );
 	}
 
 	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {
@@ -259,10 +223,10 @@ class SpecialManageCA extends SpecialPage {
 		$lang = $this->getLanguage();
 		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
 		$html .= Html::openElement( 'thead' ) . Html::openElement( 'tr' );
-		foreach ( [ 'localwiki', 'attached-on', 'method', 'blocked', 'editcount', 'groups' ] as $col ) {
+		foreach ( [ 'localwiki', 'attached-on', 'method' ] as $col ) {
 			$html .= Html::element( 'th', [], $this->msg( "centralauth-admin-list-$col" )->text() );
 		}
-		$html .= Html::element( 'th', [], '' ); // Action column
+		$html .= Html::element( 'th', [], '' ); // Checkbox column
 		$html .= Html::closeElement( 'tr' ) . Html::closeElement( 'thead' );
 		$html .= Html::openElement( 'tbody' );
 
@@ -317,34 +281,12 @@ class SpecialManageCA extends SpecialPage {
 
 			$html .= Html::rawElement( 'td', [ 'class' => 'mw-centralauth-wikislist-method' ], $icon );
 
-			// Blocked
-			if ( $row['blocked'] ) {
-				$blockLogUrl = $url ? rtrim( $url, '/' ) . '/wiki/Special:Log/block?page=User:' . urlencode( $username ) :
-					SpecialPage::getTitleFor( 'Log', 'block' )->getFullURL( [ 'page' => 'User:' . $username ] );
-				$blockedDisplay = Html::element( 'a', [ 'href' => $blockLogUrl ], $this->msg( 'centralauth-admin-yes' )->text() );
-			} else {
-				$blockedDisplay = $this->msg( 'centralauth-admin-notblocked' )->text();
-			}
-			$html .= Html::rawElement( 'td', [], $blockedDisplay );
-
-			// Editcount
-			$contribsUrl = $url ? rtrim( $url, '/' ) . '/wiki/Special:Contributions/' . urlencode( $username ) :
-				SpecialPage::getTitleFor( 'Contributions', $username )->getFullURL();
-			$editCountDisplay = Html::element( 'a', [ 'href' => $contribsUrl ], $lang->formatNum( $row['editCount'] ) );
-			$html .= Html::rawElement( 'td', [ 'class' => 'mw-centralauth-wikislist-editcount' ], $editCountDisplay );
-
-			// Groups
-			$html .= Html::element( 'td', [], $lang->commaList( $row['groups'] ) );
-
-			// Action
-			$action = '';
+			// Checkbox
+			$checkbox = '';
 			if ( $row['manual'] ) {
-				$action = Html::element( 'a', [
-					'href' => $this->getPageTitle()->getLocalURL( [ 'remove' => $wikiId ] ),
-					'style' => 'color: #d33;'
-				], $this->msg( 'mca-manage-remove' )->text() );
+				$checkbox = Html::check( 'remove_wikis[]', false, [ 'value' => $wikiId ] );
 			}
-			$html .= Html::rawElement( 'td', [], $action );
+			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
 
 			$html .= Html::closeElement( 'tr' );
 		}
@@ -360,10 +302,8 @@ class SpecialManageCA extends SpecialPage {
 			$label = $this->msg( $legendMsg )->text();
 		}
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'fieldset', [ 'class' => 'oo-ui-fieldsetLayout' ],
-				Html::element( 'legend', [ 'class' => 'oo-ui-fieldsetLayout-header' ], $label ) .
-				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
-			)
+			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid #a2a9b1; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
+			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}
 }

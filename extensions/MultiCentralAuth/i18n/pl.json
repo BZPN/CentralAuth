@@ -68,8 +68,17 @@
 	"mca-manage-error-wiki-not-found": "Wiki $1 nie istnieje lub jest nieosiągalna.",
 	"mca-merge-success": "Pomyślnie połączono konta dla użytkownika $1.",
 	"mca-unmerge-success": "Pomyślnie rozłączono konta dla użytkownika $1.",
-	"mca-manage-success": "Wiki $1 pomyślnie.",
+	"mca-manage-success": "Zmiany zostały pomyślnie zapisane.",
 	"mca-manage-merged-success": "Wiki $1 pomyślnie połączona.",
 	"mca-manage-instructions": "Użyj tej strony, aby ręcznie dołączyć inne lokalne wiki do swojego widoku CentralAuth. Wybierz domenę i wpisz poddomenę wiki.",
-	"mca-manage-remove": "Usuń"
+	"mca-manage-remove": "Usuń",
+	"mca-manage-delete-selected": "Usuń wybrane",
+	"mca-manage-confirm-delete": "Czy na pewno chcesz usunąć wybrane wiki?",
+	"ago-minutes": "$1 {{PLURAL:$1|minutę|minuty|minut}} temu",
+	"ago-hours": "$1 {{PLURAL:$1|godzinę|godziny|godzin}} temu",
+	"ago-days": "$1 {{PLURAL:$1|dzień|dni}} temu",
+	"ago-months": "$1 {{PLURAL:$1|miesiąc|miesiące|miesięcy}} temu",
+	"ago-years": "$1 {{PLURAL:$1|rok|lata|lat}} temu",
+	"ago-less-than-month": "mniej niż miesiąc temu",
+	"ago-now": "przed chwilą"
 }
