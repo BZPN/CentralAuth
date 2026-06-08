@@ -13,10 +13,6 @@ use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
 use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
-use OOUI\FieldsetLayout;
-use OOUI\HtmlSnippet;
-use OOUI\PanelLayout;
-use OOUI\Widget;
 use Wikimedia\Rdbms\IConnectionProvider;
 
 class SpecialCentralAuth extends SpecialPage {
@@ -49,6 +45,8 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->setHeaders();
 		$this->getOutput()->addModuleStyles( [
 			'mediawiki.codex.messagebox.styles',
+			'oojs-ui-core.styles',
+			'oojs-ui-widgets.styles',
 			'ext.multicentralauth.styles'
 		] );
 		$this->getOutput()->addModules( 'ext.multicentralauth.js' );
@@ -302,20 +300,11 @@ class SpecialCentralAuth extends SpecialPage {
 			$label = $this->msg( $legendMsg )->text();
 		}
 
-		$fieldset = new FieldsetLayout( [
-			'label' => $label,
-			'items' => [
-				new Widget( [
-					'content' => new HtmlSnippet( $html ),
-				] ),
-			],
-		] );
-		return (string)new PanelLayout( [
-			'classes' => [ 'mw-htmlform-ooui-wrapper' ],
-			'expanded' => false,
-			'padded' => true,
-			'framed' => true,
-			'content' => $fieldset,
-		] );
+		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ],
+			Html::rawElement( 'fieldset', [ 'class' => 'oo-ui-fieldsetLayout' ],
+				Html::element( 'legend', [ 'class' => 'oo-ui-fieldsetLayout-header' ], $label ) .
+				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
+			)
+		);
 	}
 }
