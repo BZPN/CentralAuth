@@ -6,6 +6,11 @@
 	},
 	"multicentralauth-desc": "MultiCentralAuth - strona specjalna wyświetlająca dane o kontach uniwersalnych z wielu źródeł.",
 	"centralauth": "Zarządzanie kontem uniwersalnym",
+	"centralauthmerge": "Łączenie kont CentralAuth",
+	"centralauthunmerge": "Rozłączanie kont CentralAuth",
+	"manageca": "Zarządzaj moim CentralAuth",
+	"action-ca-merge": "łączyć konta CentralAuth",
+	"action-ca-manage": "zarządzać lokalnymi załącznikami CentralAuth",
 	"centralauth-admin-list-localwiki": "Wiki",
 	"centralauth-admin-list-attached-on": "Dołączono",
 	"centralauth-admin-list-method": "Metoda",
@@ -50,5 +55,10 @@
 	"mca-manage-current-wikis": "Aktualnie dołączone wiki:",
 	"mca-manage-no-wikis": "Brak dołączonych wiki.",
 	"mca-error-invalid-user": "Nieprawidłowa nazwa użytkownika.",
-	"mca-error-user-not-found": "Użytkownik nie został znaleziony."
+	"mca-error-user-not-found": "Użytkownik nie został znaleziony.",
+	"mca-merge-success": "Pomyślnie połączono konta dla użytkownika $1.",
+	"mca-unmerge-success": "Pomyślnie rozłączono konta dla użytkownika $1.",
+	"mca-manage-success": "Wiki $1 pomyślnie.",
+	"mca-manage-instructions": "Użyj tej strony, aby ręcznie dołączyć inne lokalne wiki do swojego widoku CentralAuth. Wprowadź identyfikator bazy danych wiki (np. „enwiki”).",
+	"mca-manage-remove": "Usuń"
 }

@@ -6,6 +6,7 @@ use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\User\UserNameUtils;
 use Wikimedia\Rdbms\IConnectionProvider;
+use MediaWiki\Html\Html;
 
 class SpecialCentralAuthUnmerge extends SpecialPage {
 
@@ -64,6 +65,7 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 			__METHOD__
 		);
 
+		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unmerge-success', $localUserName )->parse() ) );
 		return true;
 	}
 }

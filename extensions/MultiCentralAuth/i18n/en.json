@@ -6,6 +6,11 @@
 	},
 	"multicentralauth-desc": "MultiCentralAuth - a special page that displays central authentication data from multiple sources.",
 	"centralauth": "Central authentication",
+	"centralauthmerge": "Merge CentralAuth accounts",
+	"centralauthunmerge": "Unmerge CentralAuth accounts",
+	"manageca": "Manage my CentralAuth",
+	"action-ca-merge": "merge CentralAuth accounts",
+	"action-ca-manage": "manage your CentralAuth local attachments",
 	"centralauth-admin-list-localwiki": "Wiki",
 	"centralauth-admin-list-attached-on": "Attached on",
 	"centralauth-admin-list-method": "Method",
@@ -50,5 +55,10 @@
 	"mca-manage-current-wikis": "Currently attached wikis:",
 	"mca-manage-no-wikis": "No wikis attached.",
 	"mca-error-invalid-user": "Invalid username.",
-	"mca-error-user-not-found": "User not found."
+	"mca-error-user-not-found": "User not found.",
+	"mca-merge-success": "Accounts merged successfully for $1.",
+	"mca-unmerge-success": "Accounts unmerged successfully for $1.",
+	"mca-manage-success": "Wiki $1 successfully.",
+	"mca-manage-instructions": "Use this page to manually attach other local wikis to your CentralAuth view. Enter the database ID of the wiki (e.g., 'enwiki').",
+	"mca-manage-remove": "Remove"
 }
