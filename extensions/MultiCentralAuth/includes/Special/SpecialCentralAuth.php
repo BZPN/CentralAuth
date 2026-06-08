@@ -127,7 +127,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$htmlForm->setSubmitTextMsg( 'mca-view-user-info' );
 		$htmlForm->prepareForm();
 
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-header-view' ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-header-view', 'mca-header-type-view' ) );
 	}
 
 	private function showLocalData( $user, array $manualWikis ) {
@@ -145,7 +145,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$editCount = $userData ? (int)$userData->user_editcount : 0;
 
 		$info = $this->formatUserInfo( $user->getName(), $reg, $editCount );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $localWikiName ] ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $localWikiName ], 'mca-header-type-info' ) );
 
 		$rows = [];
 		// Always show home wiki
@@ -186,7 +186,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$table = $this->renderTable( $rows, $user->getName() );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-header-list-local' ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-header-list-local', 'mca-header-type-list' ) );
 	}
 
 	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {
@@ -236,10 +236,10 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$info = $this->formatUserInfo( $username, $reg, $editCount, $sumEditCount, count( $rows ), $globalGroups );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $sourceName ] ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $sourceName ], 'mca-header-type-info' ) );
 
 		$table = $this->renderTable( $rows, $username );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg, 'mca-header-type-list' ) );
 	}
 
 	private function formatUserInfo( $username, $reg, $editCount, $sumEditCount = null, $attachedCount = null, $globalGroups = [] ) {
@@ -391,7 +391,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 	}
 
-	private function getFramedFieldsetLayout( $html, $legendMsg ): string {
+	private function getFramedFieldsetLayout( $html, $legendMsg, $headerClass = '' ): string {
 		if ( is_array( $legendMsg ) ) {
 			$label = $this->msg( ...$legendMsg )->text();
 		} else {
@@ -399,7 +399,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'h2', [ 'class' => 'mca-box-header' ], $label ) .
+			Html::rawElement( 'h2', [ 'class' => 'mca-box-header ' . $headerClass ], $label ) .
 			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}

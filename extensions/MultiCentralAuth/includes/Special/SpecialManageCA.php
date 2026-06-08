@@ -77,7 +77,8 @@ class SpecialManageCA extends SpecialPage {
 		// 1. Instructions
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout(
 			Html::element( 'p', [], $this->msg( 'mca-manage-instructions' )->text() ),
-			'manageca'
+			'manageca',
+			'mca-header-type-list'
 		) );
 
 		// 2. Add form
@@ -108,7 +109,7 @@ class SpecialManageCA extends SpecialPage {
 
 		$htmlForm->prepareForm();
 		$status = $htmlForm->tryAuthorizedSubmit();
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'mca-manage-action-add' ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'mca-manage-action-add', 'mca-header-type-view' ) );
 
 		// 3. Tables with checkboxes
 		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
@@ -149,7 +150,7 @@ class SpecialManageCA extends SpecialPage {
 				'class' => 'mw-ui-button mw-ui-destructive',
 				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
 			] );
-			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $deleteContent, 'mca-manage-delete-selected' ) );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $deleteContent, 'mca-manage-delete-selected', 'mca-header-type-delete' ) );
 		}
 
 		$this->getOutput()->addHTML( Html::closeElement( 'form' ) );
@@ -212,7 +213,7 @@ class SpecialManageCA extends SpecialPage {
 			if ( in_array( $wikiHost, $attachedWikis ) ) {
 				continue;
 			}
-			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $username );
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $username ) ?? [];
 			$rows[] = [
 				'wiki' => $wikiHost,
 				'url' => "https://$wikiHost/",
@@ -227,13 +228,13 @@ class SpecialManageCA extends SpecialPage {
 		}
 
 		$table = $this->renderTable( $rows, $username );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg, 'mca-header-type-list' ) );
 	}
 
 	private function showOtherManualData( $user, array $manualWikis ) {
 		$rows = [];
 		foreach ( $manualWikis as $wikiHost ) {
-			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() );
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() ) ?? [];
 			$rows[] = [
 				'wiki' => $wikiHost,
 				'url' => "https://$wikiHost/",
@@ -249,7 +250,7 @@ class SpecialManageCA extends SpecialPage {
 
 		if ( $rows ) {
 			$table = $this->renderTable( $rows, $user->getName() );
-			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-manage-current-wikis' ) );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-manage-current-wikis', 'mca-header-type-list' ) );
 		}
 	}
 
@@ -337,14 +338,14 @@ class SpecialManageCA extends SpecialPage {
 		return $html;
 	}
 
-	private function getFramedFieldsetLayout( $html, $legendMsg ): string {
+	private function getFramedFieldsetLayout( $html, $legendMsg, $headerClass = '' ): string {
 		if ( is_array( $legendMsg ) ) {
 			$label = $this->msg( ...$legendMsg )->text();
 		} else {
 			$label = $this->msg( $legendMsg )->text();
 		}
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'h2', [ 'class' => 'mca-box-header' ], $label ) .
+			Html::rawElement( 'h2', [ 'class' => 'mca-box-header ' . $headerClass ], $label ) .
 			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}
