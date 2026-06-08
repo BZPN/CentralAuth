@@ -58,6 +58,7 @@ class SpecialManageCA extends SpecialPage {
 		}
 
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
+		$suppressedWikis = $this->externalCAProvider->getSuppressedWikis( $user->getId(), true );
 
 		// Bulk removal logic
 		$removeWikis = $this->getRequest()->getArray( 'remove_wikis' );
@@ -70,6 +71,21 @@ class SpecialManageCA extends SpecialPage {
 				],
 				__METHOD__
 			);
+
+			$insertSuppression = [];
+			foreach ( $removeWikis as $wikiId ) {
+				$insertSuppression[] = [
+					'msw_user_id' => $user->getId(),
+					'msw_wiki_id' => $wikiId,
+				];
+			}
+			$dbw->insert(
+				'mca_suppressed_wikis',
+				$insertSuppression,
+				__METHOD__,
+				[ 'IGNORE' ]
+			);
+
 			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success' )->parse() ) );
 			$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
 			return;
@@ -142,12 +158,12 @@ class SpecialManageCA extends SpecialPage {
 
 		if ( $externalUsernames['wm'] || $wmManual ) {
 			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
-			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
+			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual, $suppressedWikis );
 		}
 
 		if ( $externalUsernames['mh'] || $mhManual ) {
 			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
-			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
+			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual, $suppressedWikis );
 		}
 
 		if ( $otherManual ) {
@@ -189,12 +205,21 @@ class SpecialManageCA extends SpecialPage {
 			[ 'IGNORE' ]
 		);
 
+		$dbw->delete(
+			'mca_suppressed_wikis',
+			[
+				'msw_user_id' => $user->getId(),
+				'msw_wiki_id' => $hostname,
+			],
+			__METHOD__
+		);
+
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-merged-success', $hostname )->parse() ) );
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
 		return true;
 	}
 
-	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {
+	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
 		$merged = $data['merged'] ?? [];
 		$rows = [];
 		$attachedWikis = [];
@@ -202,6 +227,11 @@ class SpecialManageCA extends SpecialPage {
 		foreach ( $merged as $m ) {
 			$parsedUrl = parse_url( $m['url'] );
 			$host = isset( $parsedUrl['host'] ) ? strtolower( $parsedUrl['host'] ) : null;
+
+			if ( $host && in_array( $host, $suppressedWikis ) ) {
+				continue;
+			}
+
 			$isManual = $host && in_array( $host, $manualWikis );
 
 			$rows[] = [
