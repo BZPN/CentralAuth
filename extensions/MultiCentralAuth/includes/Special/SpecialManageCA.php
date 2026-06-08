@@ -117,9 +117,6 @@ class SpecialManageCA extends SpecialPage {
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 		$htmlForm->setSubmitTextMsg( 'mca-manage-action-add' );
-		if ( !$hasLinkedAccounts ) {
-			$htmlForm->setSubmitAttributes( [ 'disabled' => true ] );
-		}
 
 		$htmlForm->prepareForm();
 		$status = $htmlForm->tryAuthorizedSubmit();
