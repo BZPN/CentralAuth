@@ -26,14 +26,69 @@ class ExternalCAProvider {
 			->where( [ 'mei_user_id' => $userId ] )
 			->fetchRow();
 
-		if ( !$row ) {
-			return [ 'wm' => null, 'mh' => null ];
+		$farms = $this->getFarms();
+		$result = [];
+		foreach ( $farms as $farm ) {
+			$result[$farm['id']] = null;
 		}
 
-		return [
-			'wm' => $row->mei_wm_username,
-			'mh' => $row->mei_mh_username,
-		];
+		// Backward compatibility for wm/mh if they are in farms
+		if ( $row ) {
+			if ( isset( $result['wm'] ) ) $result['wm'] = $row->mei_wm_username;
+			if ( isset( $result['mh'] ) ) $result['mh'] = $row->mei_mh_username;
+		}
+
+		return $result;
+	}
+
+	public function getFarms(): array {
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		$rows = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_farms' )
+			->fetchResultSet();
+
+		$farms = [];
+		foreach ( $rows as $row ) {
+			$farms[] = [
+				'id' => $row->mf_id,
+				'name' => $row->mf_display_name,
+				'api_url' => $row->mf_api_url,
+				'is_centralauth' => (bool)$row->mf_is_centralauth,
+				'header_msg' => $row->mf_header_msg,
+			];
+		}
+
+		// Default farms if none configured
+		if ( !$farms ) {
+			$farms = [
+				[
+					'id' => 'wm',
+					'name' => 'Wikimedia',
+					'api_url' => 'https://meta.wikimedia.org/w/api.php',
+					'is_centralauth' => true,
+					'header_msg' => 'mca-header-list-wm',
+				],
+				[
+					'id' => 'mh',
+					'name' => 'Miraheze',
+					'api_url' => 'https://meta.miraheze.org/w/api.php',
+					'is_centralauth' => true,
+					'header_msg' => 'mca-header-list-mh',
+				]
+			];
+		}
+
+		return $farms;
+	}
+
+	public function getFarmWikis( string $farmId ): array {
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		return $dbr->newSelectQueryBuilder()
+			->select( 'mfw_wiki_id' )
+			->from( 'mca_farm_wikis' )
+			->where( [ 'mfw_farm_id' => $farmId ] )
+			->fetchFieldValues();
 	}
 
 	public function fetchGlobalUserInfo( string $apiUrl, string $username ): ?array {
@@ -63,7 +118,16 @@ class ExternalCAProvider {
 			return null;
 		}
 
-		return $data['query']['globaluserinfo'] ?? null;
+		$gui = $data['query']['globaluserinfo'] ?? null;
+		if ( $gui && isset( $gui['merged'] ) ) {
+			foreach ( $gui['merged'] as &$m ) {
+				if ( isset( $m['groups'] ) ) {
+					$m['groups'] = array_values( array_diff( $m['groups'], [ '*', 'user', 'autoconfirmed' ] ) );
+				}
+			}
+		}
+
+		return $gui;
 	}
 
 	public function getLocalAttachedWikis( int $userId, bool $usePrimary = false ): array {
@@ -137,12 +201,27 @@ class ExternalCAProvider {
 
 	public function categorizeWiki( string $hostname ): string {
 		$hostname = strtolower( $hostname );
-		if ( str_ends_with( $hostname, '.wikipedia.org' ) || str_ends_with( $hostname, '.wikimedia.org' ) ) {
-			return 'wm';
+		$farms = $this->getFarms();
+
+		foreach ( $farms as $farm ) {
+			$farmWikis = $this->getFarmWikis( $farm['id'] );
+			if ( in_array( $hostname, $farmWikis ) ) {
+				return $farm['id'];
+			}
+
+			// Heuristics for default farms if they are not explicitly in mca_farm_wikis
+			if ( $farm['id'] === 'wm' ) {
+				if ( str_ends_with( $hostname, '.wikipedia.org' ) || str_ends_with( $hostname, '.wikimedia.org' ) ) {
+					return 'wm';
+				}
+			}
+			if ( $farm['id'] === 'mh' ) {
+				if ( str_ends_with( $hostname, '.miraheze.org' ) ) {
+					return 'mh';
+				}
+			}
 		}
-		if ( str_ends_with( $hostname, '.miraheze.org' ) ) {
-			return 'mh';
-		}
+
 		return 'local';
 	}
 }

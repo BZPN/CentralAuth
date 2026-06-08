@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\MultiCentralAuth\Special;
 
 use MediaWiki\Block\BlockManager;
 use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
+use MediaWiki\User\UserFactory;
 use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\MainConfigNames;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -20,23 +21,38 @@ class SpecialManageCA extends SpecialPage {
 	private ExternalCAProvider $externalCAProvider;
 	private UserGroupManager $userGroupManager;
 	private BlockManager $blockManager;
+	private UserFactory $userFactory;
 
 	public function __construct(
 		IConnectionProvider $dbProvider,
 		ExternalCAProvider $externalCAProvider,
 		UserGroupManager $userGroupManager,
-		BlockManager $blockManager
+		BlockManager $blockManager,
+		UserFactory $userFactory
 	) {
 		parent::__construct( 'ManageCA', 'ca-manage' );
 		$this->dbProvider = $dbProvider;
 		$this->externalCAProvider = $externalCAProvider;
 		$this->userGroupManager = $userGroupManager;
 		$this->blockManager = $blockManager;
+		$this->userFactory = $userFactory;
 	}
 
 	public function execute( $subpage ) {
 		$this->checkPermissions();
 		$this->setHeaders();
+
+		$targetName = $this->getRequest()->getText( 'target' );
+		$user = $this->getUser();
+
+		if ( $this->getAuthority()->isAllowed( 'ca-merge' ) && $targetName ) {
+			$user = $this->userFactory->newFromName( $targetName );
+			if ( !$user || !$user->isRegistered() ) {
+				$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-error-user-not-found' )->parse() ) );
+				return;
+			}
+		}
+
 		$this->getOutput()->addModuleStyles( [
 			'mediawiki.codex.messagebox.styles',
 			'oojs-ui-core.styles',
@@ -47,8 +63,11 @@ class SpecialManageCA extends SpecialPage {
 			'ext.multicentralauth.styles'
 		] );
 
-		$user = $this->getUser();
 		$dbw = $this->dbProvider->getPrimaryDatabase();
+
+		if ( $this->getAuthority()->isAllowed( 'ca-merge' ) ) {
+			$this->showTargetForm( $targetName );
+		}
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		$hasLinkedAccounts = (bool)( $externalUsernames['wm'] || $externalUsernames['mh'] );
@@ -62,33 +81,50 @@ class SpecialManageCA extends SpecialPage {
 
 		// Bulk removal logic
 		$removeWikis = $this->getRequest()->getArray( 'remove_wikis' );
+		$comment = $this->getRequest()->getText( 'wpComment' );
 		if ( $this->getRequest()->wasPosted() && $removeWikis && $this->getUser()->matchEditToken( $this->getRequest()->getVal( 'wpEditToken' ) ) ) {
-			$dbw->delete(
-				'mca_local_attachments',
-				[
-					'mla_user_id' => $user->getId(),
-					'mla_wiki_id' => $removeWikis,
-				],
-				__METHOD__
-			);
+			if ( !$comment ) {
+				$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-error-comment-required' )->parse() ) );
+			} else {
+				$dbw->delete(
+					'mca_local_attachments',
+					[
+						'mla_user_id' => $user->getId(),
+						'mla_wiki_id' => $removeWikis,
+					],
+					__METHOD__
+				);
 
-			$insertSuppression = [];
-			foreach ( $removeWikis as $wikiId ) {
-				$insertSuppression[] = [
-					'msw_user_id' => $user->getId(),
-					'msw_wiki_id' => $wikiId,
-				];
+				$insertSuppression = [];
+				foreach ( $removeWikis as $wikiId ) {
+					$insertSuppression[] = [
+						'msw_user_id' => $user->getId(),
+						'msw_wiki_id' => $wikiId,
+					];
+				}
+				$dbw->insert(
+					'mca_suppressed_wikis',
+					$insertSuppression,
+					__METHOD__,
+					[ 'IGNORE' ]
+				);
+
+				// Log actions
+				foreach ( $removeWikis as $wikiId ) {
+					$logEntry = new \LogPage( 'mca-log' );
+					$logEntry->addEntry(
+						'manage-remove',
+						$user->getUserPage(),
+						$comment,
+						[ $wikiId, $this->getUser()->getName() ],
+						$this->getUser()
+					);
+				}
+
+				$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success' )->parse() ) );
+				$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $user->getName() ] ) );
+				return;
 			}
-			$dbw->insert(
-				'mca_suppressed_wikis',
-				$insertSuppression,
-				__METHOD__,
-				[ 'IGNORE' ]
-			);
-
-			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success' )->parse() ) );
-			$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
-			return;
 		}
 
 		// 1. Instructions
@@ -130,9 +166,17 @@ class SpecialManageCA extends SpecialPage {
 			}
 		}
 
+		$formDescriptor['comment'] = [
+			'type' => 'text',
+			'name' => 'comment',
+			'label-message' => 'mca-comment',
+			'required' => true,
+		];
+
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 		$htmlForm->setSubmitTextMsg( 'mca-manage-action-add' );
+		$htmlForm->addHiddenField( 'target', $user->getName() );
 
 		$htmlForm->prepareForm();
 		$status = $htmlForm->tryAuthorizedSubmit();
@@ -142,36 +186,49 @@ class SpecialManageCA extends SpecialPage {
 		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
 		$this->getOutput()->addHTML( Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() ) );
 
-		$wmManual = [];
-		$mhManual = [];
+		$farms = $this->externalCAProvider->getFarms();
+		$farmManual = [];
+		foreach ( $farms as $farm ) {
+			$farmManual[$farm['id']] = [];
+		}
 		$otherManual = [];
+
 		foreach ( $manualWikis as $wiki ) {
 			$cat = $this->externalCAProvider->categorizeWiki( $wiki );
-			if ( $cat === 'wm' ) {
-				$wmManual[] = $wiki;
-			} elseif ( $cat === 'mh' ) {
-				$mhManual[] = $wiki;
+			if ( isset( $farmManual[$cat] ) ) {
+				$farmManual[$cat][] = $wiki;
 			} else {
 				$otherManual[] = $wiki;
 			}
 		}
 
-		if ( $externalUsernames['wm'] || $wmManual ) {
-			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
-			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual, $suppressedWikis );
-		}
+		foreach ( $farms as $farm ) {
+			$farmId = $farm['id'];
+			$extUsername = $externalUsernames[$farmId] ?? null;
+			$manual = $farmManual[$farmId];
 
-		if ( $externalUsernames['mh'] || $mhManual ) {
-			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
-			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual, $suppressedWikis );
+			if ( $extUsername || $manual ) {
+				if ( $farm['is_centralauth'] && $farm['api_url'] ) {
+					$data = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $extUsername ?? '' );
+					$this->showExternalData( $data, $extUsername ?? $user->getName(), $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic', $manual, $suppressedWikis );
+				} else {
+					$this->showOtherManualData( $user, $manual, $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic' );
+				}
+			}
 		}
 
 		if ( $otherManual ) {
-			$this->showOtherManualData( $user, $otherManual );
+			$this->showOtherManualData( $user, $otherManual, 'Other', 'mca-manage-current-wikis' );
 		}
 
-		if ( $externalUsernames['wm'] || $externalUsernames['mh'] || $manualWikis ) {
+		if ( $externalUsernames || $manualWikis ) {
 			$deleteContent = Html::element( 'p', [], $this->msg( 'mca-manage-delete-help' )->text() );
+			$deleteContent .= Html::rawElement( 'div', [ 'class' => 'mw-ui-vform' ],
+				Html::rawElement( 'div', [ 'class' => 'mw-ui-field' ],
+					Html::element( 'label', [], $this->msg( 'mca-comment' )->text() ) .
+					Html::element( 'input', [ 'name' => 'wpComment', 'class' => 'mw-ui-input', 'required' => true ] )
+				)
+			);
 			$deleteContent .= Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
 				'name' => 'delete_selected',
 				'class' => 'mw-ui-button mw-ui-destructive',
@@ -187,12 +244,18 @@ class SpecialManageCA extends SpecialPage {
 		$subdomain = $formData['subdomain'];
 		$domain = $formData['domain'];
 		$hostname = strtolower( ( $domain === 'other' ) ? $subdomain : $subdomain . $domain );
+		$comment = $formData['comment'];
+		$targetName = $this->getRequest()->getText( 'target' );
 
 		if ( !$this->externalCAProvider->isValidWiki( $hostname ) ) {
 			return $this->msg( 'mca-manage-error-wiki-not-found', $hostname );
 		}
 
 		$user = $this->getUser();
+		if ( $this->getAuthority()->isAllowed( 'ca-merge' ) && $targetName ) {
+			$user = $this->userFactory->newFromName( $targetName );
+		}
+
 		$dbw = $this->dbProvider->getPrimaryDatabase();
 
 		$dbw->insert(
@@ -214,9 +277,37 @@ class SpecialManageCA extends SpecialPage {
 			__METHOD__
 		);
 
+		// Log action
+		$logEntry = new \LogPage( 'mca-log' );
+		$logEntry->addEntry(
+			'manage-add',
+			$user->getUserPage(),
+			$comment,
+			[ $hostname, $this->getUser()->getName() ],
+			$this->getUser()
+		);
+
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-merged-success', $hostname )->parse() ) );
-		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $user->getName() ] ) );
 		return true;
+	}
+
+	private function showTargetForm( $default = '' ) {
+		$formDescriptor = [
+			'target' => [
+				'type' => 'user',
+				'name' => 'target',
+				'label-message' => 'mca-target-label',
+				'default' => $default,
+			],
+		];
+
+		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+		$htmlForm->setMethod( 'get' );
+		$htmlForm->setSubmitTextMsg( 'mca-view-user-info' );
+		$htmlForm->prepareForm();
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-header-view', 'mca-header-type-view' ) );
 	}
 
 	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
@@ -272,7 +363,7 @@ class SpecialManageCA extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg, 'mca-header-type-list' ) );
 	}
 
-	private function showOtherManualData( $user, array $manualWikis ) {
+	private function showOtherManualData( $user, array $manualWikis, string $farmName, string $headerMsg ) {
 		$rows = [];
 		foreach ( $manualWikis as $wikiHost ) {
 			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() ) ?? [];
@@ -291,7 +382,7 @@ class SpecialManageCA extends SpecialPage {
 
 		if ( $rows ) {
 			$table = $this->renderTable( $rows, $user->getName() );
-			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-manage-current-wikis', 'mca-header-type-list' ) );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $headerMsg, 'mca-header-type-list' ) );
 		}
 	}
 
