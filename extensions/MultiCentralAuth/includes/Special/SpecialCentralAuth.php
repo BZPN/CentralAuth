@@ -399,7 +399,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid #a2a9b1; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
+			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
 			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}
