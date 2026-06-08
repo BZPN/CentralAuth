@@ -51,6 +51,9 @@ class SpecialCentralAuth extends SpecialPage {
 			'mediawiki.codex.messagebox.styles',
 			'oojs-ui-core.styles',
 			'oojs-ui-widgets.styles',
+			'mediawiki.ui.input',
+			'mediawiki.ui.button',
+			'mediawiki.ui.vform',
 			'ext.multicentralauth.styles'
 		] );
 		$this->getOutput()->addModules( 'ext.multicentralauth.js' );
@@ -107,22 +110,22 @@ class SpecialCentralAuth extends SpecialPage {
 	}
 
 	private function showUsernameForm( $default = '' ) {
-		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
-			Html::rawElement( 'div', [ 'style' => 'display: flex; align-items: center; gap: 0.5em;' ],
-				Html::rawElement( 'label', [ 'for' => 'mca-target', 'class' => 'mw-ui-message' ],
+		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get', 'class' => 'mw-ui-vform' ],
+			Html::rawElement( 'div', [ 'class' => 'mw-ui-vform-field' ],
+				Html::rawElement( 'label', [ 'for' => 'mca-target' ],
 					$this->msg( 'mca-target-label' )->text() . ' <span class="mw-ui-required">*</span>'
 				) .
 				Html::input( 'target', $default, 'text', [
 					'id' => 'mca-target',
-					'class' => 'mw-ui-input mw-ui-input-inline',
+					'class' => 'mw-ui-input',
 					'size' => 40,
 					'required' => 'required'
-				] ) .
-				Html::submitButton( $this->msg( 'mca-view-user-info' )->text(), [
-					'id' => 'mca-submit',
-					'class' => 'mw-ui-button mw-ui-progressive'
 				] )
-			)
+			) .
+			Html::submitButton( $this->msg( 'mca-view-user-info' )->text(), [
+				'id' => 'mca-submit',
+				'class' => 'mw-ui-button mw-ui-progressive'
+			] )
 		);
 
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $form, 'mca-header-view' ) );
@@ -246,7 +249,7 @@ class SpecialCentralAuth extends SpecialPage {
 		if ( $reg ) {
 			$ts = new MWTimestamp( $reg );
 			$date = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() );
-			$ago = $ts->getRelativeTimestamp();
+			$ago = $this->getSimplifiedRelativeTimestamp( $ts );
 			$prettyReg = $date . ' (' . $ago . ')';
 		}
 
@@ -361,6 +364,34 @@ class SpecialCentralAuth extends SpecialPage {
 		return $html;
 	}
 
+	private function getSimplifiedRelativeTimestamp( MWTimestamp $ts ): string {
+		$lang = $this->getLanguage();
+		$diff = time() - $ts->getTimestamp();
+
+		if ( $diff < 0 ) {
+			return $lang->getHumanTimestamp( $ts, null, $this->getUser() );
+		}
+
+		if ( $diff < 60 ) {
+			return $this->msg( 'ago-now' )->text();
+		} elseif ( $diff < 3600 ) {
+			$val = floor( $diff / 60 );
+			return $this->msg( 'ago-minutes' )->numParams( $val )->text();
+		} elseif ( $diff < 86400 ) {
+			$val = floor( $diff / 3600 );
+			return $this->msg( 'ago-hours' )->numParams( $val )->text();
+		} elseif ( $diff < 2592000 ) {
+			$val = floor( $diff / 86400 );
+			return $this->msg( 'ago-days' )->numParams( $val )->text();
+		} elseif ( $diff < 31536000 ) {
+			$val = floor( $diff / 2592000 );
+			return $this->msg( 'ago-months' )->numParams( $val )->text();
+		} else {
+			$val = floor( $diff / 31536000 );
+			return $this->msg( 'ago-years' )->numParams( $val )->text();
+		}
+	}
+
 	private function getFramedFieldsetLayout( $html, $legendMsg ): string {
 		if ( is_array( $legendMsg ) ) {
 			$label = $this->msg( ...$legendMsg )->text();
@@ -369,10 +400,8 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'fieldset', [ 'class' => 'oo-ui-fieldsetLayout' ],
-				Html::element( 'legend', [ 'class' => 'oo-ui-fieldsetLayout-header' ], $label ) .
-				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
-			)
+			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid #a2a9b1; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
+			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}
 }
