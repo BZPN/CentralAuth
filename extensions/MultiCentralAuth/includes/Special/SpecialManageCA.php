@@ -62,6 +62,8 @@ class SpecialManageCA extends SpecialPage {
 			'mediawiki.ui.vform',
 			'ext.multicentralauth.styles'
 		] );
+		$this->getOutput()->addModules( 'ext.multicentralauth.js' );
+		$this->getOutput()->addJsConfigVars( 'mcaFarmWikis', $farmWikis );
 
 		$dbw = $this->dbProvider->getPrimaryDatabase();
 
@@ -109,16 +111,42 @@ class SpecialManageCA extends SpecialPage {
 					[ 'IGNORE' ]
 				);
 
-				// Log actions
+				// Group wikis by farm for auto-unmerge
+				$wikisByFarm = [];
 				foreach ( $removeWikis as $wikiId ) {
-					$logEntry = new \LogPage( 'mca-log' );
-					$logEntry->addEntry(
-						'manage-remove',
-						$user->getUserPage(),
-						$comment,
-						[ $wikiId, $this->getUser()->getName() ],
-						$this->getUser()
-					);
+					$farmId = $this->externalCAProvider->categorizeWiki( $wikiId );
+					$wikisByFarm[$farmId][] = $wikiId;
+				}
+
+				// Log actions and check for auto-unmerge
+				foreach ( $removeWikis as $wikiId ) {
+					$logEntry = new \ManualLogEntry( 'mca-log', 'manage-remove' );
+					$logEntry->setPerformer( $this->getUser() );
+					$logEntry->setTarget( $user->getUserPage() );
+					$logEntry->setComment( $comment );
+					$logEntry->setParameters( [ '4::wiki' => $wikiId ] );
+					$logEntry->insert();
+					$logEntry->publish( $logEntry->insert() );
+				}
+
+				// Auto-unmerge logic: if all wikis of a farm are removed, remove the external ID
+				$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
+				foreach ( $wikisByFarm as $farmId => $wikis ) {
+					if ( isset( $externalUsernames[$farmId] ) && $externalUsernames[$farmId] ) {
+						// Check if any wikis of this farm still exist for this user
+						$remainingWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
+						$farmStillHasWikis = false;
+						foreach ( $remainingWikis as $remWiki ) {
+							if ( $this->externalCAProvider->categorizeWiki( $remWiki ) === $farmId ) {
+								$farmStillHasWikis = true;
+								break;
+							}
+						}
+
+						if ( !$farmStillHasWikis ) {
+							$dbw->delete( 'mca_external_userids', [ 'meu_user_id' => $user->getId(), 'meu_farm_id' => $farmId ], __METHOD__ );
+						}
+					}
 				}
 
 				$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-success' )->parse() ) );
@@ -135,12 +163,41 @@ class SpecialManageCA extends SpecialPage {
 		) );
 
 		// 2. Add form
+		$farms = $this->externalCAProvider->getFarms();
+		$farmOptions = [ 'Manual entry' => 'manual' ];
+		foreach ( $farms as $farm ) {
+			$farmOptions[$farm['name']] = $farm['id'];
+		}
+
+		$farmWikis = [];
+		foreach ( $farms as $farm ) {
+			$wikis = $this->externalCAProvider->getFarmWikis( $farm['id'] );
+			foreach ( $wikis as $w ) {
+				$farmWikis[$farm['id']][$w] = $w;
+			}
+		}
+
 		$formDescriptor = [
+			'farm' => [
+				'type' => 'select',
+				'name' => 'farm',
+				'label-message' => 'mca-manage-farm',
+				'options' => $farmOptions,
+				'default' => 'manual',
+				'id' => 'mca-farm-select',
+			],
+			'dynamic_wiki' => [
+				'type' => 'select',
+				'name' => 'dynamic_wiki',
+				'label-message' => 'mca-manage-wiki-selection',
+				'options' => [],
+				'cssclass' => 'mca-dynamic-wiki-field',
+				'id' => 'mca-wiki-select',
+			],
 			'subdomain' => [
 				'type' => 'text',
 				'name' => 'subdomain',
 				'label-message' => 'mca-manage-subdomain',
-				'required' => true,
 			],
 			'domain' => [
 				'type' => 'select',
@@ -156,9 +213,10 @@ class SpecialManageCA extends SpecialPage {
 					'.wikinews.org' => '.wikinews.org',
 					'.miraheze.org' => '.miraheze.org',
 				],
-				'required' => true,
 			],
 		];
+
+		// Populate dynamic wikis if a farm is selected (this would ideally be JS, but we'll handle it in onSubmit)
 
 		if ( !$hasLinkedAccounts ) {
 			foreach ( $formDescriptor as &$field ) {
@@ -242,10 +300,19 @@ class SpecialManageCA extends SpecialPage {
 	}
 
 	public function onSubmit( array $formData ) {
-		$subdomain = $formData['subdomain'];
-		$domain = $formData['domain'];
-		$hostname = strtolower( ( $domain === 'other' ) ? $subdomain : $subdomain . $domain );
+		$farm = $formData['farm'];
 		$comment = $formData['comment'];
+		if ( $farm === 'manual' ) {
+			$subdomain = $formData['subdomain'];
+			$domain = $formData['domain'];
+			$hostname = strtolower( $subdomain . $domain );
+		} else {
+			$hostname = $formData['dynamic_wiki'] ?: $formData['subdomain']; // Fallback to subdomain if dynamic selection was empty
+		}
+
+		if ( !$hostname ) {
+			return $this->msg( 'mca-error-no-wiki-provided' );
+		}
 		$targetName = $this->getRequest()->getText( 'target' );
 
 		if ( !$this->externalCAProvider->isValidWiki( $hostname ) ) {
@@ -279,14 +346,13 @@ class SpecialManageCA extends SpecialPage {
 		);
 
 		// Log action
-		$logEntry = new \LogPage( 'mca-log' );
-		$logEntry->addEntry(
-			'manage-add',
-			$user->getUserPage(),
-			$comment,
-			[ $hostname, $this->getUser()->getName() ],
-			$this->getUser()
-		);
+		$logEntry = new \ManualLogEntry( 'mca-log', 'manage-add' );
+		$logEntry->setPerformer( $this->getUser() );
+		$logEntry->setTarget( $user->getUserPage() );
+		$logEntry->setComment( $comment );
+		$logEntry->setParameters( [ '4::wiki' => $hostname ] );
+		$logEntry->insert();
+		$logEntry->publish( $logEntry->insert() );
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-merged-success', $hostname )->parse() ) );
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $user->getName() ] ) );

@@ -81,7 +81,7 @@ class SpecialCAMergeRequest extends SpecialPage {
 			foreach ( $farms as $farm ) {
 				$id = $farm['id'];
 				if ( empty( $data["{$id}_user"] ) || empty( $data["{$id}_diff"] ) ) {
-					return [ "mca-error-{$id}-required" ];
+					return [ $this->msg( 'mca-error-farm-required', $farm['name'] ) ];
 				}
 				$externalData[$id] = [
 					'user' => $data["{$id}_user"],
@@ -89,8 +89,10 @@ class SpecialCAMergeRequest extends SpecialPage {
 				];
 			}
 		} else {
+			$farmName = '';
+			foreach ( $farms as $f ) if ( $f['id'] === $selectedFarmId ) $farmName = $f['name'];
 			if ( empty( $data["{$selectedFarmId}_user"] ) || empty( $data["{$selectedFarmId}_diff"] ) ) {
-				return [ "mca-error-{$selectedFarmId}-required" ];
+				return [ $this->msg( 'mca-error-farm-required', $farmName ) ];
 			}
 			$externalData[$selectedFarmId] = [
 				'user' => $data["{$selectedFarmId}_user"],

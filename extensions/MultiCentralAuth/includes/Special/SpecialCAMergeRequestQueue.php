@@ -34,6 +34,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 
 	private function showQueue() {
 		$searchUser = $this->getRequest()->getText( 'mca_user' );
+		$filterStatus = $this->getRequest()->getText( 'mca_status' );
 
 		// Search form
 		$form = Html::openElement( 'form', [ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ] );
@@ -42,7 +43,16 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 				Html::element( 'label', [], "Search by user:" ) .
 				Html::element( 'input', [ 'name' => 'mca_user', 'class' => 'mw-ui-input', 'value' => $searchUser ] )
 			) .
-			Html::submitButton( "Search", [ 'class' => 'mw-ui-button mw-ui-progressive' ] )
+			Html::rawElement( 'div', [ 'class' => 'mw-ui-field' ],
+				Html::element( 'label', [], "Filter by status:" ) .
+				Html::rawElement( 'select', [ 'name' => 'mca_status', 'class' => 'mw-ui-input' ],
+					Html::element( 'option', [ 'value' => '' ], 'All' ) .
+					Html::element( 'option', [ 'value' => 'open', 'selected' => $filterStatus === 'open' ], 'Open' ) .
+					Html::element( 'option', [ 'value' => 'done', 'selected' => $filterStatus === 'done' ], 'Done' ) .
+					Html::element( 'option', [ 'value' => 'rejected', 'selected' => $filterStatus === 'rejected' ], 'Rejected' )
+				)
+			) .
+			Html::submitButton( "Filter", [ 'class' => 'mw-ui-button mw-ui-progressive' ] )
 		);
 		$form .= Html::closeElement( 'form' );
 		$this->getOutput()->addHTML( $form );
@@ -66,6 +76,10 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			}
 		}
 
+		if ( $filterStatus ) {
+			$queryBuilder->where( [ 'mmr_status' => $filterStatus ] );
+		}
+
 		// Status order: open first, then others.
 		$rows = $queryBuilder
 			->orderBy( "CASE WHEN mmr_status = 'open' THEN 0 ELSE 1 END", 'ASC' )
@@ -83,10 +97,15 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 
 		foreach ( $rows as $row ) {
 			$user = $this->userFactory->newFromId( $row->mmr_user_id );
+			$statusClass = '';
+			if ( $row->mmr_status === 'done' ) $statusClass = 'mw-message-box-success';
+			elseif ( $row->mmr_status === 'rejected' ) $statusClass = 'mw-message-box-error';
+			elseif ( $row->mmr_status === 'open' ) $statusClass = 'mw-message-box-warning';
+
 			$table .= Html::openElement( 'tr' ) .
 				Html::element( 'td', [], $row->mmr_id ) .
 				Html::element( 'td', [], $user ? $user->getName() : 'Unknown' ) .
-				Html::element( 'td', [], $row->mmr_status ) .
+				Html::rawElement( 'td', [ 'class' => $statusClass ], Html::element( 'b', [], $row->mmr_status ) ) .
 				Html::element( 'td', [], $this->getLanguage()->userTimeAndDate( $row->mmr_timestamp, $this->getUser() ) ) .
 				Html::rawElement( 'td', [], Html::element( 'a', [
 					'href' => $this->getPageTitle( "view/{$row->mmr_id}" )->getFullURL()
