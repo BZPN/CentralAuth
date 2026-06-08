@@ -66,9 +66,9 @@ class ExternalCAProvider {
 		return $data['query']['globaluserinfo'] ?? null;
 	}
 
-	public function getLocalAttachedWikis( int $userId ): array {
-		$dbr = $this->dbProvider->getReplicaDatabase();
-		$wikis = $dbr->newSelectQueryBuilder()
+	public function getLocalAttachedWikis( int $userId, bool $usePrimary = false ): array {
+		$db = $usePrimary ? $this->dbProvider->getPrimaryDatabase() : $this->dbProvider->getReplicaDatabase();
+		$wikis = $db->newSelectQueryBuilder()
 			->select( 'mla_wiki_id' )
 			->from( 'mca_local_attachments' )
 			->where( [ 'mla_user_id' => $userId ] )

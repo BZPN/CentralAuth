@@ -56,7 +56,7 @@ class SpecialManageCA extends SpecialPage {
 			$this->getOutput()->addHTML( Html::warningBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
 		}
 
-		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
+		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
 
 		// Bulk removal logic
 		$removeWikis = $this->getRequest()->getArray( 'remove_wikis' );
@@ -142,7 +142,7 @@ class SpecialManageCA extends SpecialPage {
 			$this->showOtherManualData( $user, $otherManual );
 		}
 
-		if ( $wmManual || $mhManual || $otherManual ) {
+		if ( $manualWikis ) {
 			$deleteContent = Html::element( 'p', [], $this->msg( 'mca-manage-delete-help' )->text() );
 			$deleteContent .= Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
 				'name' => 'delete_selected',
@@ -158,7 +158,7 @@ class SpecialManageCA extends SpecialPage {
 	public function onSubmit( array $formData ) {
 		$subdomain = $formData['subdomain'];
 		$domain = $formData['domain'];
-		$hostname = ( $domain === 'other' ) ? $subdomain : $subdomain . $domain;
+		$hostname = strtolower( ( $domain === 'other' ) ? $subdomain : $subdomain . $domain );
 
 		if ( !$this->externalCAProvider->isValidWiki( $hostname ) ) {
 			return $this->msg( 'mca-manage-error-wiki-not-found', $hostname );
@@ -189,7 +189,7 @@ class SpecialManageCA extends SpecialPage {
 
 		foreach ( $merged as $m ) {
 			$parsedUrl = parse_url( $m['url'] );
-			$host = $parsedUrl['host'] ?? null;
+			$host = isset( $parsedUrl['host'] ) ? strtolower( $parsedUrl['host'] ) : null;
 			$isManual = $host && in_array( $host, $manualWikis );
 
 			$rows[] = [
@@ -213,19 +213,17 @@ class SpecialManageCA extends SpecialPage {
 				continue;
 			}
 			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $username );
-			if ( $metadata ) {
-				$rows[] = [
-					'wiki' => $wikiHost,
-					'url' => "https://$wikiHost/",
-					'attachedMethod' => 'local',
-					'editCount' => $metadata['editcount'],
-					'attachedTimestamp' => $metadata['registration'],
-					'groups' => $metadata['groups'],
-					'blocked' => $metadata['blocked'],
-					'manual' => true,
-					'host' => $wikiHost,
-				];
-			}
+			$rows[] = [
+				'wiki' => $wikiHost,
+				'url' => "https://$wikiHost/",
+				'attachedMethod' => 'local',
+				'editCount' => $metadata['editcount'] ?? 0,
+				'attachedTimestamp' => $metadata['registration'] ?? '',
+				'groups' => $metadata['groups'] ?? [],
+				'blocked' => $metadata['blocked'] ?? false,
+				'manual' => true,
+				'host' => $wikiHost,
+			];
 		}
 
 		$table = $this->renderTable( $rows, $username );
@@ -236,19 +234,17 @@ class SpecialManageCA extends SpecialPage {
 		$rows = [];
 		foreach ( $manualWikis as $wikiHost ) {
 			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() );
-			if ( $metadata ) {
-				$rows[] = [
-					'wiki' => $wikiHost,
-					'url' => "https://$wikiHost/",
-					'attachedMethod' => 'local',
-					'editCount' => $metadata['editcount'],
-					'attachedTimestamp' => $metadata['registration'],
-					'groups' => $metadata['groups'],
-					'blocked' => $metadata['blocked'],
-					'manual' => true,
-					'host' => $wikiHost,
-				];
-			}
+			$rows[] = [
+				'wiki' => $wikiHost,
+				'url' => "https://$wikiHost/",
+				'attachedMethod' => 'local',
+				'editCount' => $metadata['editcount'] ?? 0,
+				'attachedTimestamp' => $metadata['registration'] ?? '',
+				'groups' => $metadata['groups'] ?? [],
+				'blocked' => $metadata['blocked'] ?? false,
+				'manual' => true,
+				'host' => $wikiHost,
+			];
 		}
 
 		if ( $rows ) {
@@ -277,8 +273,7 @@ class SpecialManageCA extends SpecialPage {
 				$checkbox = Html::element( 'input', [
 					'type' => 'checkbox',
 					'name' => 'remove_wikis[]',
-					'value' => $row['host'],
-					'class' => 'mw-ui-checkbox'
+					'value' => $row['host']
 				] );
 			}
 			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
