@@ -257,17 +257,17 @@ class SpecialManageCA extends SpecialPage {
 		$lang = $this->getLanguage();
 		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
 		$html .= Html::openElement( 'thead' ) . Html::openElement( 'tr' );
+		$html .= Html::element( 'th', [], '' ); // Checkbox column first
 		foreach ( [ 'localwiki', 'attached-on', 'method' ] as $col ) {
 			$html .= Html::element( 'th', [], $this->msg( "centralauth-admin-list-$col" )->text() );
 		}
-		$html .= Html::element( 'th', [], '' ); // Checkbox column
 		$html .= Html::closeElement( 'tr' ) . Html::closeElement( 'thead' );
 		$html .= Html::openElement( 'tbody' );
 
 		foreach ( $rows as $row ) {
 			$html .= Html::openElement( 'tr' );
 
-			// Wiki
+			// Wiki hostname/id
 			$wikiId = $row['wiki'];
 			$url = $row['url'] ?? null;
 			$wikiDisplayId = $wikiId;
@@ -277,6 +277,18 @@ class SpecialManageCA extends SpecialPage {
 				$parsedUrl = parse_url( $url );
 				$wikiDisplayId = $parsedUrl['host'] ?? $wikiId;
 				$dbId = $wikiDisplayId;
+			}
+
+			// Checkbox
+			$checkbox = Html::element( 'input', [
+				'type' => 'checkbox',
+				'name' => 'remove_wikis[]',
+				'value' => $dbId
+			] );
+			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
+
+			// Wiki Link
+			if ( $url ) {
 				$userPageUrl = rtrim( $url, '/' ) . '/wiki/User:' . urlencode( $username );
 				$wikiDisplay = Html::element( 'a', [ 'href' => $userPageUrl ], $wikiDisplayId );
 			} else {
@@ -316,17 +328,6 @@ class SpecialManageCA extends SpecialPage {
 			], $this->msg( 'centralauth-merge-method-questionmark' )->text() );
 
 			$html .= Html::rawElement( 'td', [ 'class' => 'mw-centralauth-wikislist-method' ], $icon );
-
-			// Checkbox
-			$checkbox = '';
-			if ( $row['manual'] ) {
-				$checkbox = Html::element( 'input', [
-					'type' => 'checkbox',
-					'name' => 'remove_wikis[]',
-					'value' => $dbId
-				] );
-			}
-			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
 
 			$html .= Html::closeElement( 'tr' );
 		}
