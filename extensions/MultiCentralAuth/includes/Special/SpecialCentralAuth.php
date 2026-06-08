@@ -186,7 +186,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$table = $this->renderTable( $rows, $user->getName() );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $localWikiName ] ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-header-list-local' ) );
 	}
 
 	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {

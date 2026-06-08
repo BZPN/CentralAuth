@@ -43,6 +43,7 @@
 	"mca-view-user-info": "View user information",
 	"mca-header-list-wm": "List of Wikimedia accounts",
 	"mca-header-list-mh": "List of Miraheze accounts",
+	"mca-header-list-local": "List of local accounts",
 	"mca-username": "'''Username''': $1",
 	"mca-registered": "'''Registered''': $1",
 	"mca-editcount": "'''Total edit count''': $1",
