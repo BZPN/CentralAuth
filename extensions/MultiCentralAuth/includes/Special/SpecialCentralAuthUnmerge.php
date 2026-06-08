@@ -33,6 +33,12 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 				'label-message' => 'mca-unmerge-local-user',
 				'required' => true,
 			],
+			'comment' => [
+				'type' => 'text',
+				'name' => 'comment',
+				'label-message' => 'mca-comment',
+				'required' => true,
+			],
 		];
 
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
@@ -42,6 +48,7 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 
 	public function onSubmit( array $formData ) {
 		$localUserName = $formData['local_user'];
+		$comment = $formData['comment'];
 
 		$user = $this->userNameUtils->getCanonical( $localUserName );
 		if ( !$user ) {
@@ -64,6 +71,19 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 			[ 'mei_user_id' => $localUserId ],
 			__METHOD__
 		);
+
+		// Log action
+		$targetUser = \MediaWiki\User\User::newFromName( $localUserName );
+		if ( $targetUser ) {
+			$logEntry = new \LogPage( 'mca-log' );
+			$logEntry->addEntry(
+				'unmerge',
+				$targetUser->getUserPage(),
+				$comment,
+				[ $this->getUser()->getName() ],
+				$this->getUser()
+			);
+		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unmerge-success', $localUserName )->parse() ) );
 		return true;

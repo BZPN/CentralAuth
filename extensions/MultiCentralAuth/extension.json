@@ -11,12 +11,19 @@
 	},
 	"AvailableRights": [
 		"ca-merge",
-		"ca-manage"
+		"ca-manage",
+		"ca-request",
+		"ca-admin"
 	],
 	"GroupPermissions": {
+		"user": {
+			"ca-request": true,
+			"ca-manage": true
+		},
 		"sysop": {
 			"ca-merge": true,
-			"ca-manage": true
+			"ca-manage": true,
+			"ca-admin": true
 		}
 	},
 	"SpecialPages": {
@@ -35,7 +42,8 @@
 			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuthMerge",
 			"services": [
 				"ConnectionProvider",
-				"UserNameUtils"
+				"UserNameUtils",
+				"MultiCentralAuth.ExternalCAProvider"
 			]
 		},
 		"CentralAuthUnmerge": {
@@ -51,7 +59,28 @@
 				"ConnectionProvider",
 				"MultiCentralAuth.ExternalCAProvider",
 				"UserGroupManager",
-				"BlockManager"
+				"BlockManager",
+				"UserFactory"
+			]
+		},
+		"CAMergeRequest": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCAMergeRequest",
+			"services": [
+				"ConnectionProvider",
+				"MultiCentralAuth.ExternalCAProvider"
+			]
+		},
+		"CAMergeRequestQueue": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCAMergeRequestQueue",
+			"services": [
+				"ConnectionProvider",
+				"UserFactory"
+			]
+		},
+		"CentralAuthSettings": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuthSettings",
+			"services": [
+				"ConnectionProvider"
 			]
 		}
 	},
@@ -97,8 +126,46 @@
 	"ServiceWiringFiles": [
 		"includes/ServiceWiring.php"
 	],
+	"LogTypes": [
+		"mca-log"
+	],
+	"LogNames": {
+		"mca-log": "mca-log-name"
+	},
+	"LogHeaders": {
+		"mca-log": "mca-log-header"
+	},
+	"LogActionsHandlers": {
+		"mca-log/merge": "LogFormatter",
+		"mca-log/unmerge": "LogFormatter",
+		"mca-log/manage-add": "LogFormatter",
+		"mca-log/manage-remove": "LogFormatter"
+	},
 	"Hooks": {
-		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onLoadExtensionSchemaUpdates"
+		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onLoadExtensionSchemaUpdates",
+		"ContributionsToolLinks": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onContributionsToolLinks",
+		"MCAMergeRequestSubmitted": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestSubmitted",
+		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved"
+	},
+	"EchoNotifications": {
+		"mca-merge-request-submitted": {
+			"primary-link": {
+				"message": "mca-notification-merge-request-submitted-link",
+				"destination": "agent"
+			},
+			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
+			"group": "positive",
+			"icon": "feedback"
+		},
+		"mca-merge-request-resolved": {
+			"primary-link": {
+				"message": "mca-notification-merge-request-resolved-link",
+				"destination": "agent"
+			},
+			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
+			"group": "positive",
+			"icon": "feedback"
+		}
 	},
 	"manifest_version": 2
 }

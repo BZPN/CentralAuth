@@ -14,10 +14,6 @@ use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
 use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
-use OOUI\FieldsetLayout;
-use OOUI\HtmlSnippet;
-use OOUI\PanelLayout;
-use OOUI\Widget;
 use Wikimedia\Rdbms\IConnectionProvider;
 
 class SpecialCentralAuth extends SpecialPage {
@@ -74,9 +70,12 @@ class SpecialCentralAuth extends SpecialPage {
 			return;
 		}
 
+		$this->showGlobalBlockInfo( $user );
+
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
 		$suppressedWikis = $this->externalCAProvider->getSuppressedWikis( $user->getId() );
+		$farms = $this->externalCAProvider->getFarms();
 
 		// 1. Local Wiki Data
 		$localManual = [];
@@ -87,28 +86,58 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 		$this->showLocalData( $user, $localManual );
 
-		// 2. Wikimedia Data
-		$wmManual = [];
-		foreach ( $manualWikis as $wiki ) {
-			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'wm' ) {
-				$wmManual[] = $wiki;
+		// 2. Dynamic Farm Data
+		foreach ( $farms as $farm ) {
+			$farmId = $farm['id'];
+			$farmManual = [];
+			foreach ( $manualWikis as $wiki ) {
+				if ( $this->externalCAProvider->categorizeWiki( $wiki ) === $farmId ) {
+					$farmManual[] = $wiki;
+				}
+			}
+
+			$extUsername = $externalUsernames[$farmId] ?? null;
+			if ( $extUsername || $farmManual ) {
+				if ( $farm['is_centralauth'] && $farm['api_url'] ) {
+					$farmData = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $extUsername ?? '' );
+					$this->showExternalData(
+						$farmData,
+						$extUsername ?? $user->getName(),
+						$farm['name'],
+						$farm['header_msg'] ?? 'mca-header-list-generic',
+						$farmManual,
+						$suppressedWikis
+					);
+				} else {
+					// Direct API farm or no CentralAuth
+					$this->showOtherManualData( $user, $farmManual, $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic' );
+				}
 			}
 		}
-		if ( $externalUsernames['wm'] || $wmManual ) {
-			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
-			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual, $suppressedWikis );
+	}
+
+	private function showOtherManualData( $user, array $manualWikis, string $farmName, string $headerMsg ) {
+		$rows = [];
+		foreach ( $manualWikis as $wikiHost ) {
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() ) ?? [];
+			$rows[] = [
+				'wiki' => $wikiHost,
+				'url' => "https://$wikiHost/",
+				'attachedMethod' => 'primary',
+				'editCount' => $metadata['editcount'] ?? 0,
+				'attachedTimestamp' => $metadata['registration'] ?? '',
+				'groups' => $metadata['groups'] ?? [],
+				'blocked' => $metadata['blocked'] ?? false,
+				'manual' => true,
+				'host' => $wikiHost,
+			];
 		}
 
-		// 3. Miraheze Data
-		$mhManual = [];
-		foreach ( $manualWikis as $wiki ) {
-			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'mh' ) {
-				$mhManual[] = $wiki;
-			}
-		}
-		if ( $externalUsernames['mh'] || $mhManual ) {
-			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
-			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual, $suppressedWikis );
+		if ( $rows ) {
+			$info = $this->formatUserInfo( $user->getName(), '', 0, null, count( $rows ) );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $farmName ], 'mca-header-type-info' ) );
+			$table = $this->renderTable( $rows, $user->getName() );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $headerMsg, 'mca-header-type-list' ) );
 		}
 	}
 
@@ -394,6 +423,28 @@ class SpecialCentralAuth extends SpecialPage {
 		} else {
 			$val = floor( $diff / 31536000 );
 			return $this->msg( 'ago-years' )->numParams( $val )->text();
+		}
+	}
+
+	private function showGlobalBlockInfo( $user ) {
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		$block = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'globalblocking' )
+			->where( [ 'gb_target' => $user->getName() ] )
+			->fetchRow();
+
+		if ( $block ) {
+			$blocker = $block->gb_by_text;
+			$expiry = $block->gb_expiry;
+			$reason = $block->gb_reason_text;
+			$timestamp = ( new MWTimestamp( $block->gb_timestamp ) )->getHumanTimestamp();
+
+			$msg = $this->msg( 'mca-global-block-notice', $blocker, $expiry, $reason, $timestamp )->parse();
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
+				Html::rawElement( 'div', [], $msg )
+			) );
 		}
 	}
 
