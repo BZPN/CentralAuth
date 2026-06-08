@@ -48,7 +48,10 @@
 		"ManageCA": {
 			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialManageCA",
 			"services": [
-				"ConnectionProvider"
+				"ConnectionProvider",
+				"MultiCentralAuth.ExternalCAProvider",
+				"UserGroupManager",
+				"BlockManager"
 			]
 		}
 	},

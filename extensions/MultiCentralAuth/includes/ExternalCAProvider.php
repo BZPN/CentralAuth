@@ -74,4 +74,60 @@ class ExternalCAProvider {
 			->where( [ 'mla_user_id' => $userId ] )
 			->fetchFieldValues();
 	}
+
+	public function isValidWiki( string $hostname ): bool {
+		$url = "https://$hostname/w/api.php?" . http_build_query( [
+			'action' => 'query',
+			'meta' => 'siteinfo',
+			'format' => 'json',
+			'formatversion' => 2,
+		] );
+
+		$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+		$status = $request->execute();
+
+		return $status->isOK();
+	}
+
+	public function fetchUserMetadata( string $hostname, string $username ): ?array {
+		$url = "https://$hostname/w/api.php?" . http_build_query( [
+			'action' => 'query',
+			'list' => 'users',
+			'ususers' => $username,
+			'usprop' => 'editcount|registration|groups|blockinfo',
+			'format' => 'json',
+			'formatversion' => 2,
+		] );
+
+		$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+		$status = $request->execute();
+
+		if ( !$status->isOK() ) {
+			return null;
+		}
+
+		$data = json_decode( $request->getContent(), true );
+		$user = $data['query']['users'][0] ?? null;
+
+		if ( !$user || isset( $user['missing'] ) || isset( $user['invalid'] ) ) {
+			return null;
+		}
+
+		return [
+			'editcount' => $user['editcount'] ?? 0,
+			'registration' => $user['registration'] ?? '',
+			'groups' => $user['groups'] ?? [],
+			'blocked' => isset( $user['blockid'] ),
+		];
+	}
+
+	public function categorizeWiki( string $hostname ): string {
+		if ( str_ends_with( $hostname, '.wikipedia.org' ) || str_ends_with( $hostname, '.wikimedia.org' ) ) {
+			return 'wm';
+		}
+		if ( str_ends_with( $hostname, '.miraheze.org' ) ) {
+			return 'mh';
+		}
+		return 'local';
+	}
 }
