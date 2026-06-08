@@ -14,13 +14,12 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 	private UserFactory $userFactory;
 
 	public function __construct( IConnectionProvider $dbProvider, UserFactory $userFactory ) {
-		parent::__construct( 'CAMergeRequestQueue', 'ca-merge' );
+		parent::__construct( 'CAMergeRequestQueue', 'ca-request-view' );
 		$this->dbProvider = $dbProvider;
 		$this->userFactory = $userFactory;
 	}
 
 	public function execute( $subpage ) {
-		$this->checkPermissions();
 		$this->setHeaders();
 
 		$parts = explode( '/', $subpage );
@@ -33,6 +32,9 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 	}
 
 	private function showQueue() {
+		if ( !$this->getAuthority()->isAllowed( 'ca-merge' ) ) {
+			$this->checkPermissions();
+		}
 		$dbr = $this->dbProvider->getReplicaDatabase();
 		// Status order: open first, then others.
 		$rows = $dbr->newSelectQueryBuilder()
@@ -82,6 +84,12 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			return;
 		}
 
+		// Security: requester can only see their own requests if not admin
+		if ( !$this->getAuthority()->isAllowed( 'ca-merge' ) && $row->mmr_user_id !== $this->getUser()->getId() ) {
+			$this->checkPermissions();
+			return;
+		}
+
 		$user = $this->userFactory->newFromId( $row->mmr_user_id );
 		$extData = json_decode( $row->mmr_external_data, true ) ?: [];
 
@@ -100,7 +108,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			Html::element( 'p', [], "Status: {$row->mmr_status}" )
 		) );
 
-		if ( $row->mmr_status === 'open' ) {
+		if ( $row->mmr_status === 'open' && $this->getAuthority()->isAllowed( 'ca-merge' ) ) {
 			$this->showActionForm( $row );
 		}
 	}

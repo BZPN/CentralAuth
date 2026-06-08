@@ -71,9 +71,8 @@ class ExternalCAProvider {
 			];
 		}
 
-		// Default farms if none configured
-		if ( !$farms ) {
-			$farms = [
+		// Default farms
+		$defaults = [
 				[
 					'id' => 'wm',
 					'name' => 'Wikimedia',
@@ -88,7 +87,14 @@ class ExternalCAProvider {
 					'is_centralauth' => true,
 					'header_msg' => 'mca-header-list-mh',
 				]
-			];
+		];
+
+		// Merge defaults with DB farms, ensuring defaults are present if not overridden
+		$farmIds = array_column( $farms, 'id' );
+		foreach ( $defaults as $default ) {
+			if ( !in_array( $default['id'], $farmIds ) ) {
+				$farms[] = $default;
+			}
 		}
 
 		return $farms;

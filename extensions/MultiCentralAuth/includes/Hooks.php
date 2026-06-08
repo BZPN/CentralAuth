@@ -18,9 +18,9 @@ class Hooks {
 		$updater->addExtensionTable( 'mca_external_userids', __DIR__ . '/../sql/mca_external_userids.sql' );
 	}
 
-	public static function onContributionsToolLinks( $id, $title, &$toolLinks ) {
+	public static function onContributionsToolLinks( $id, $user, &$toolLinks ) {
 		$toolLinks[] = Html::element( 'a', [
-			'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $title->getText() )->getFullURL(),
+			'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $user->getName() )->getFullURL(),
 			'class' => 'mw-contributions-link-centralauth'
 		], wfMessage( 'mca-global-account-info' )->text() );
 	}
@@ -35,10 +35,10 @@ class Hooks {
 
 		// Find all groups that have the 'ca-merge' permission
 		$groupsWithPermission = [];
-		$permissionManager = \MediaWiki\MediaWikiServices::getInstance()->getPermissionManager();
-		$allGroups = \MediaWiki\MediaWikiServices::getInstance()->getUserGroupManager()->listAllGroups();
-		foreach ( $allGroups as $group ) {
-			if ( in_array( 'ca-merge', $permissionManager->getGroupPermissions( $group ) ) ) {
+		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$groupPermissions = $config->get( \MediaWiki\MainConfigNames::GroupPermissions );
+		foreach ( $groupPermissions as $group => $permissions ) {
+			if ( isset( $permissions['ca-merge'] ) && $permissions['ca-merge'] ) {
 				$groupsWithPermission[] = $group;
 			}
 		}

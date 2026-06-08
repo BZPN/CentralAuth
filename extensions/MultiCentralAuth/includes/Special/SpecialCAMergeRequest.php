@@ -64,6 +64,7 @@ class SpecialCAMergeRequest extends SpecialPage {
 		$formDescriptor['comment'] = [
 			'type' => 'textarea',
 			'label-message' => 'mca-comment',
+			'rows' => 3,
 		];
 
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
