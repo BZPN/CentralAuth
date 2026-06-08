@@ -144,11 +144,13 @@ class SpecialManageCA extends SpecialPage {
 		}
 
 		if ( $wmManual || $mhManual || $otherManual ) {
-			$this->getOutput()->addHTML( Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
+			$deleteContent = Html::element( 'p', [], $this->msg( 'mca-manage-delete-help' )->text() );
+			$deleteContent .= Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
 				'name' => 'delete_selected',
 				'class' => 'mw-ui-button mw-ui-destructive',
 				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
-			] ) );
+			] );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $deleteContent, 'mca-manage-delete-selected' ) );
 		}
 
 		$this->getOutput()->addHTML( Html::closeElement( 'form' ) );
@@ -200,6 +202,7 @@ class SpecialManageCA extends SpecialPage {
 				'groups' => $m['groups'] ?? [],
 				'blocked' => isset( $m['blocked'] ),
 				'manual' => $isManual,
+				'host' => $host,
 			];
 			if ( $host ) {
 				$attachedWikis[] = $host;
@@ -221,6 +224,7 @@ class SpecialManageCA extends SpecialPage {
 					'groups' => $metadata['groups'],
 					'blocked' => $metadata['blocked'],
 					'manual' => true,
+					'host' => $wikiHost,
 				];
 			}
 		}
@@ -243,6 +247,7 @@ class SpecialManageCA extends SpecialPage {
 					'groups' => $metadata['groups'],
 					'blocked' => $metadata['blocked'],
 					'manual' => true,
+					'host' => $wikiHost,
 				];
 			}
 		}
@@ -267,25 +272,26 @@ class SpecialManageCA extends SpecialPage {
 		foreach ( $rows as $row ) {
 			$html .= Html::openElement( 'tr' );
 
+			// Checkbox
+			$checkbox = '';
+			if ( $row['manual'] && isset( $row['host'] ) ) {
+				$checkbox = Html::element( 'input', [
+					'type' => 'checkbox',
+					'name' => 'remove_wikis[]',
+					'value' => $row['host']
+				] );
+			}
+			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
+
 			// Wiki hostname/id
 			$wikiId = $row['wiki'];
 			$url = $row['url'] ?? null;
 			$wikiDisplayId = $wikiId;
-			$dbId = $wikiId;
 
 			if ( $url ) {
 				$parsedUrl = parse_url( $url );
 				$wikiDisplayId = $parsedUrl['host'] ?? $wikiId;
-				$dbId = $wikiDisplayId;
 			}
-
-			// Checkbox
-			$checkbox = Html::element( 'input', [
-				'type' => 'checkbox',
-				'name' => 'remove_wikis[]',
-				'value' => $dbId
-			] );
-			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
 
 			// Wiki Link
 			if ( $url ) {
@@ -343,7 +349,7 @@ class SpecialManageCA extends SpecialPage {
 			$label = $this->msg( $legendMsg )->text();
 		}
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid #a2a9b1; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
+			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
 			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}

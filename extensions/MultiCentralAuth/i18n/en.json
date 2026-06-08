@@ -74,6 +74,7 @@
 	"mca-manage-instructions": "Use this page to manually attach other local wikis to your CentralAuth view. Select the domain and enter the subdomain of the wiki.",
 	"mca-manage-remove": "Remove",
 	"mca-manage-delete-selected": "Delete selected",
+	"mca-manage-delete-help": "Removing a wiki will detach it from your local account information.",
 	"mca-manage-confirm-delete": "Are you sure you want to remove the selected wikis?",
 	"ago-minutes": "$1 {{PLURAL:$1|minute|minutes}} ago",
 	"ago-hours": "$1 {{PLURAL:$1|hour|hours}} ago",
