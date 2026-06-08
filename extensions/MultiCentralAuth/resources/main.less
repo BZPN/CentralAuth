@@ -19,6 +19,8 @@
 }
 
 .mw-centralauth-wikislist {
+	font-size: 0.9em !important;
+
 	img {
 		vertical-align: middle;
 		margin-right: 0.5em;
@@ -30,6 +32,12 @@
 
 	.mw-centralauth-wikislist-editcount {
 		text-align: right;
+	}
+
+	td input[type='checkbox'] {
+		display: inline-block !important;
+		visibility: visible !important;
+		vertical-align: middle !important;
 	}
 }
 
@@ -44,19 +52,31 @@ input[name="delete_selected"] {
 	margin-bottom: 1em;
 }
 
-.oo-ui-fieldsetLayout-header {
-	font-family: sans-serif;
+.mca-box-header {
+	font-family: sans-serif !important;
+	font-size: 1.1em !important;
+	color: #54595d !important;
+	border-bottom: 1px solid #c8ccd1 !important; // Re-add for mobile
+	margin: 0 0 0.5em 0 !important;
+	padding: 0 !important;
+}
+
+@media screen and (min-width: 982px) {
+	.mca-box-header {
+		border-bottom: none !important;
+	}
 }
 
 .mca-info-box {
 	ul {
 		list-style: disc;
-		margin: 0 0 0 1.5em;
+		margin: 0 0 0 1.2em !important;
 		padding: 0;
 	}
 
 	li {
 		margin-bottom: 0.2em;
+		font-size: 0.95em !important;
 	}
 }
 

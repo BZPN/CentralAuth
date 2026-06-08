@@ -68,11 +68,12 @@ class ExternalCAProvider {
 
 	public function getLocalAttachedWikis( int $userId ): array {
 		$dbr = $this->dbProvider->getReplicaDatabase();
-		return $dbr->newSelectQueryBuilder()
+		$wikis = $dbr->newSelectQueryBuilder()
 			->select( 'mla_wiki_id' )
 			->from( 'mca_local_attachments' )
 			->where( [ 'mla_user_id' => $userId ] )
 			->fetchFieldValues();
+		return array_map( 'strtolower', $wikis );
 	}
 
 	public function isValidWiki( string $hostname ): bool {
@@ -122,6 +123,7 @@ class ExternalCAProvider {
 	}
 
 	public function categorizeWiki( string $hostname ): string {
+		$hostname = strtolower( $hostname );
 		if ( str_ends_with( $hostname, '.wikipedia.org' ) || str_ends_with( $hostname, '.wikimedia.org' ) ) {
 			return 'wm';
 		}
