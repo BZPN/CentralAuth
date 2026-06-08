@@ -52,12 +52,12 @@ class SpecialCAMergeRequest extends SpecialPage {
 			$name = $farm['name'];
 			$formDescriptor["{$id}_user"] = [
 				'type' => 'text',
-				'label' => "$name username",
+				'label' => $this->msg( 'mca-request-farm-user', $name )->text(),
 			];
 			$formDescriptor["{$id}_diff"] = [
 				'type' => 'text',
-				'label' => "$name confirmation edit link",
-				'help' => "From the account you want to link, perform an edit on any wiki of the $name farm with content confirming ownership of the account on this wiki in English and paste the diff here.",
+				'label' => $this->msg( 'mca-request-farm-diff', $name )->text(),
+				'help' => $this->msg( 'mca-request-farm-diff-help', $name )->text(),
 			];
 		}
 

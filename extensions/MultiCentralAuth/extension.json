@@ -167,9 +167,12 @@
 	},
 	"EchoNotificationCategories": {
 		"mca-merge-request": {
-			"priority": 3,
-			"tooltip": "echo-category-title-mca-merge-request"
+			"priority": 3
 		}
+	},
+	"DefaultUserOptions": {
+		"echo-subscriptions-email-mca-merge-request": true,
+		"echo-subscriptions-web-mca-merge-request": true
 	},
 	"AvailableRights": [
 		"ca-merge",

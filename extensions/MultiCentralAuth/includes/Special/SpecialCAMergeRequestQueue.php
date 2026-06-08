@@ -21,6 +21,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 
 	public function execute( $subpage ) {
 		$this->setHeaders();
+		$this->getOutput()->addModuleStyles( [ 'mediawiki.ui.input', 'mediawiki.ui.button', 'mediawiki.ui.vform' ] );
 
 		$parts = explode( '/', $subpage );
 		if ( isset( $parts[0] ) && $parts[0] === 'view' && isset( $parts[1] ) ) {
@@ -32,26 +33,52 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 	}
 
 	private function showQueue() {
-		if ( !$this->getAuthority()->isAllowed( 'ca-merge' ) ) {
-			$this->checkPermissions();
-		}
+		$searchUser = $this->getRequest()->getText( 'mca_user' );
+
+		// Search form
+		$form = Html::openElement( 'form', [ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ] );
+		$form .= Html::rawElement( 'div', [ 'class' => 'mw-ui-vform' ],
+			Html::rawElement( 'div', [ 'class' => 'mw-ui-field' ],
+				Html::element( 'label', [], "Search by user:" ) .
+				Html::element( 'input', [ 'name' => 'mca_user', 'class' => 'mw-ui-input', 'value' => $searchUser ] )
+			) .
+			Html::submitButton( "Search", [ 'class' => 'mw-ui-button mw-ui-progressive' ] )
+		);
+		$form .= Html::closeElement( 'form' );
+		$this->getOutput()->addHTML( $form );
+
 		$dbr = $this->dbProvider->getReplicaDatabase();
-		// Status order: open first, then others.
-		$rows = $dbr->newSelectQueryBuilder()
+		$queryBuilder = $dbr->newSelectQueryBuilder()
 			->select( '*' )
-			->from( 'mca_merge_requests' )
+			->from( 'mca_merge_requests' );
+
+		// Security: non-admins only see their own requests
+		if ( !$this->getAuthority()->isAllowed( 'ca-merge' ) ) {
+			$queryBuilder->where( [ 'mmr_user_id' => $this->getUser()->getId() ] );
+		}
+
+		if ( $searchUser ) {
+			$user = $this->userFactory->newFromName( $searchUser );
+			if ( $user && $user->isRegistered() ) {
+				$queryBuilder->where( [ 'mmr_user_id' => $user->getId() ] );
+			} else {
+				$queryBuilder->where( [ 'mmr_user_id' => 0 ] ); // Return nothing
+			}
+		}
+
+		// Status order: open first, then others.
+		$rows = $queryBuilder
 			->orderBy( "CASE WHEN mmr_status = 'open' THEN 0 ELSE 1 END", 'ASC' )
-			->orderBy( 'mmr_user_id', 'ASC' )
 			->orderBy( 'mmr_timestamp', 'DESC' )
 			->fetchResultSet();
 
-		$table = Html::openElement( 'table', [ 'class' => 'wikitable sortable', 'style' => 'width: 100%;' ] );
+		$table = Html::openElement( 'table', [ 'class' => 'wikitable sortable', 'style' => 'width: 100%; margin-top: 1em;' ] );
 		$table .= Html::openElement( 'tr' ) .
-			Html::element( 'th', [], 'ID' ) .
-			Html::element( 'th', [], 'User' ) .
-			Html::element( 'th', [], 'Status' ) .
-			Html::element( 'th', [], 'Date' ) .
-			Html::element( 'th', [], 'Action' ) .
+			Html::element( 'th', [], $this->msg( 'mca-request-id' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-request-user' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-request-status' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-request-date' )->text() ) .
+			Html::element( 'th', [], $this->msg( 'mca-request-action' )->text() ) .
 			Html::closeElement( 'tr' );
 
 		foreach ( $rows as $row ) {
@@ -93,20 +120,29 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 		$user = $this->userFactory->newFromId( $row->mmr_user_id );
 		$extData = json_decode( $row->mmr_external_data, true ) ?: [];
 
-		$extDataHtml = '';
+		$fields = [
+			'Request ID' => $row->mmr_id,
+			'User' => $user ? $user->getName() : 'Unknown',
+			'Farm Selection' => $row->mmr_farm,
+			'Status' => $row->mmr_status,
+			'Comment' => $row->mmr_comment,
+		];
+
 		foreach ( $extData as $farmId => $data ) {
-			$extDataHtml .= Html::element( 'p', [], "Farm $farmId User: " . ( $data['user'] ?? '' ) );
-			$extDataHtml .= Html::element( 'p', [], "Farm $farmId Diff: " . ( $data['diff'] ?? '' ) );
+			$fields["Farm $farmId User"] = $data['user'] ?? '';
+			$fields["Farm $farmId Diff"] = $data['diff'] ?? '';
 		}
 
-		$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mca-request-details' ],
-			Html::element( 'p', [], "Request ID: {$row->mmr_id}" ) .
-			Html::element( 'p', [], "User: " . ( $user ? $user->getName() : 'Unknown' ) ) .
-			Html::element( 'p', [], "Farm Selection: {$row->mmr_farm}" ) .
-			$extDataHtml .
-			Html::element( 'p', [], "Comment: {$row->mmr_comment}" ) .
-			Html::element( 'p', [], "Status: {$row->mmr_status}" )
-		) );
+		$html = Html::openElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ] );
+		$html .= Html::element( 'h2', [ 'class' => 'mca-box-header' ], $this->msg( 'mca-request-details-title' )->text() );
+		$html .= Html::openElement( 'ul' );
+		foreach ( $fields as $label => $val ) {
+			$html .= Html::rawElement( 'li', [], "'''$label''': " . htmlspecialchars( $val ) );
+		}
+		$html .= Html::closeElement( 'ul' );
+		$html .= Html::closeElement( 'div' );
+
+		$this->getOutput()->addHTML( $html );
 
 		if ( $row->mmr_status === 'open' && $this->getAuthority()->isAllowed( 'ca-merge' ) ) {
 			$this->showActionForm( $row );
