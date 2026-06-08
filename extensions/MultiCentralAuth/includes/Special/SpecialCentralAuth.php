@@ -76,6 +76,7 @@ class SpecialCentralAuth extends SpecialPage {
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
+		$suppressedWikis = $this->externalCAProvider->getSuppressedWikis( $user->getId() );
 
 		// 1. Local Wiki Data
 		$localManual = [];
@@ -95,7 +96,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 		if ( $externalUsernames['wm'] || $wmManual ) {
 			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
-			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
+			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual, $suppressedWikis );
 		}
 
 		// 3. Miraheze Data
@@ -107,7 +108,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 		if ( $externalUsernames['mh'] || $mhManual ) {
 			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
-			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
+			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual, $suppressedWikis );
 		}
 	}
 
@@ -189,7 +190,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-header-list-local', 'mca-header-type-list' ) );
 	}
 
-	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {
+	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
 		$reg = $data['registration'] ?? '';
 		$editCount = $data['editcount'] ?? 0;
 		$globalGroups = $data['groups'] ?? [];
@@ -200,6 +201,12 @@ class SpecialCentralAuth extends SpecialPage {
 		$attachedWikis = [];
 
 		foreach ( $merged as $m ) {
+			$parsedUrl = parse_url( $m['url'] );
+			$host = isset( $parsedUrl['host'] ) ? strtolower( $parsedUrl['host'] ) : null;
+			if ( $host && in_array( $host, $suppressedWikis ) ) {
+				continue;
+			}
+
 			$rows[] = [
 				'wiki' => $m['wiki'],
 				'url' => $m['url'],
@@ -210,9 +217,8 @@ class SpecialCentralAuth extends SpecialPage {
 				'blocked' => isset( $m['blocked'] ),
 			];
 			$sumEditCount += $m['editcount'];
-			$parsedUrl = parse_url( $m['url'] );
-			if ( isset( $parsedUrl['host'] ) ) {
-				$attachedWikis[] = $parsedUrl['host'];
+			if ( $host ) {
+				$attachedWikis[] = $host;
 			}
 		}
 

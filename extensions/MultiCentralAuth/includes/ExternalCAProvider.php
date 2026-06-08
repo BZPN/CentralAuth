@@ -76,6 +76,16 @@ class ExternalCAProvider {
 		return array_map( 'strtolower', $wikis );
 	}
 
+	public function getSuppressedWikis( int $userId, bool $usePrimary = false ): array {
+		$db = $usePrimary ? $this->dbProvider->getPrimaryDatabase() : $this->dbProvider->getReplicaDatabase();
+		$wikis = $db->newSelectQueryBuilder()
+			->select( 'msw_wiki_id' )
+			->from( 'mca_suppressed_wikis' )
+			->where( [ 'msw_user_id' => $userId ] )
+			->fetchFieldValues();
+		return array_map( 'strtolower', $wikis );
+	}
+
 	public function isValidWiki( string $hostname ): bool {
 		$url = "https://$hostname/w/api.php?" . http_build_query( [
 			'action' => 'query',
