@@ -20,7 +20,7 @@ class MCAMergeRequestPresentationModel extends EchoEventPresentationModel {
 	public function getHeaderMessage() {
 		$type = $this->event->getType();
 		if ( $type === 'mca-merge-request-submitted' ) {
-			return $this->msg( 'mca-notification-header-submitted', $this->getViewingUserForMessage()->getName() );
+			return $this->msg( 'mca-notification-header-submitted', $this->event->getAgent()->getName() );
 		}
 		return $this->msg( 'mca-notification-header-resolved', $this->event->getExtraParam( 'status' ) );
 	}

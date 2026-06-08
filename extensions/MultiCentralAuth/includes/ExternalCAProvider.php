@@ -20,11 +20,6 @@ class ExternalCAProvider {
 
 	public function getExternalUsernames( int $userId ): array {
 		$dbr = $this->dbProvider->getReplicaDatabase();
-		$row = $dbr->newSelectQueryBuilder()
-			->select( [ 'mei_wm_username', 'mei_mh_username' ] )
-			->from( 'mca_external_ids' )
-			->where( [ 'mei_user_id' => $userId ] )
-			->fetchRow();
 
 		$farms = $this->getFarms();
 		$result = [];
@@ -32,10 +27,27 @@ class ExternalCAProvider {
 			$result[$farm['id']] = null;
 		}
 
-		// Backward compatibility for wm/mh if they are in farms
-		if ( $row ) {
-			if ( isset( $result['wm'] ) ) $result['wm'] = $row->mei_wm_username;
-			if ( isset( $result['mh'] ) ) $result['mh'] = $row->mei_mh_username;
+		$rows = $dbr->newSelectQueryBuilder()
+			->select( [ 'meu_farm_id', 'meu_external_username' ] )
+			->from( 'mca_external_userids' )
+			->where( [ 'meu_user_id' => $userId ] )
+			->fetchResultSet();
+
+		foreach ( $rows as $row ) {
+			$result[$row->meu_farm_id] = $row->meu_external_username;
+		}
+
+		// Fallback for legacy table
+		if ( $dbr->tableExists( 'mca_external_ids' ) ) {
+			$legacy = $dbr->newSelectQueryBuilder()
+				->select( [ 'mei_wm_username', 'mei_mh_username' ] )
+				->from( 'mca_external_ids' )
+				->where( [ 'mei_user_id' => $userId ] )
+				->fetchRow();
+			if ( $legacy ) {
+				if ( isset( $result['wm'] ) && $result['wm'] === null ) $result['wm'] = $legacy->mei_wm_username;
+				if ( isset( $result['mh'] ) && $result['mh'] === null ) $result['mh'] = $legacy->mei_mh_username;
+			}
 		}
 
 		return $result;

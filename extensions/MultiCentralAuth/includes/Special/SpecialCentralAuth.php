@@ -105,19 +105,19 @@ class SpecialCentralAuth extends SpecialPage {
 						$farmData,
 						$extUsername ?? $user->getName(),
 						$farm['name'],
-						$headerMsg,
+						[ $headerMsg, $farm['name'] ],
 						$farmManual,
 						$suppressedWikis
 					);
 				} else {
 					// Direct API farm or no CentralAuth
-					$this->showOtherManualData( $user, $farmManual, $farm['name'], $headerMsg );
+					$this->showOtherManualData( $user, $farmManual, $farm['name'], [ $headerMsg, $farm['name'] ] );
 				}
 			}
 		}
 	}
 
-	private function showOtherManualData( $user, array $manualWikis, string $farmName, string $headerMsg ) {
+	private function showOtherManualData( $user, array $manualWikis, string $farmName, $headerMsg ) {
 		$rows = [];
 		foreach ( $manualWikis as $wikiHost ) {
 			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() ) ?? [];
@@ -222,7 +222,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-header-list-local', 'mca-header-type-list' ) );
 	}
 
-	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
+	private function showExternalData( ?array $data, string $username, string $sourceName, $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
 		$reg = $data['registration'] ?? '';
 		$editCount = $data['editcount'] ?? 0;
 		$globalGroups = $data['groups'] ?? [];
@@ -431,16 +431,20 @@ class SpecialCentralAuth extends SpecialPage {
 
 	private function showGlobalBlockInfo( $user ) {
 		$dbr = $this->dbProvider->getReplicaDatabase();
+		if ( !$dbr->tableExists( 'globalblocks' ) ) {
+			return;
+		}
+
 		$block = $dbr->newSelectQueryBuilder()
 			->select( '*' )
-			->from( 'globalblocking' )
+			->from( 'globalblocks' )
 			->where( [ 'gb_target' => $user->getName() ] )
 			->fetchRow();
 
 		if ( $block ) {
 			$blocker = $block->gb_by_text;
 			$expiry = $block->gb_expiry;
-			$reason = $block->gb_reason_text;
+			$reason = $block->gb_reason ?? '';
 			$timestamp = $this->getLanguage()->userTimeAndDate( $block->gb_timestamp, $this->getUser() );
 
 			$msg = $this->msg( 'mca-global-block-notice', $blocker, $expiry, $reason, $timestamp )->parse();

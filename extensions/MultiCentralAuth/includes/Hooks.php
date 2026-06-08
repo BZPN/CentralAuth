@@ -15,6 +15,7 @@ class Hooks {
 		$updater->addExtensionTable( 'mca_merge_requests', __DIR__ . '/../sql/mca_merge_requests.sql' );
 		$updater->addExtensionTable( 'mca_farms', __DIR__ . '/../sql/mca_farms.sql' );
 		$updater->addExtensionTable( 'mca_farm_wikis', __DIR__ . '/../sql/mca_farms.sql' );
+		$updater->addExtensionTable( 'mca_external_userids', __DIR__ . '/../sql/mca_external_userids.sql' );
 	}
 
 	public static function onContributionsToolLinks( $id, $title, &$toolLinks ) {
@@ -53,8 +54,9 @@ class Hooks {
 			->fetchResultSet();
 
 		$targets = [];
+		$userFactory = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory();
 		foreach ( $res as $row ) {
-			$targets[] = \MediaWiki\User\User::newFromId( $row->ug_user );
+			$targets[] = $userFactory->newFromId( $row->ug_user );
 		}
 
 		if ( $targets ) {
