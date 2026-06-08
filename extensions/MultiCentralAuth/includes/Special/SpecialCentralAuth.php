@@ -98,19 +98,20 @@ class SpecialCentralAuth extends SpecialPage {
 
 			$extUsername = $externalUsernames[$farmId] ?? null;
 			if ( $extUsername || $farmManual ) {
+				$headerMsg = $farm['header_msg'] ?? 'mca-header-list-generic';
 				if ( $farm['is_centralauth'] && $farm['api_url'] ) {
 					$farmData = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $extUsername ?? '' );
 					$this->showExternalData(
 						$farmData,
 						$extUsername ?? $user->getName(),
 						$farm['name'],
-						$farm['header_msg'] ?? 'mca-header-list-generic',
+						$headerMsg,
 						$farmManual,
 						$suppressedWikis
 					);
 				} else {
 					// Direct API farm or no CentralAuth
-					$this->showOtherManualData( $user, $farmManual, $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic' );
+					$this->showOtherManualData( $user, $farmManual, $farm['name'], $headerMsg );
 				}
 			}
 		}
@@ -179,12 +180,14 @@ class SpecialCentralAuth extends SpecialPage {
 
 		$rows = [];
 		// Always show home wiki
+		$groups = $this->userGroupManager->getUserGroups( $user );
+		$filteredGroups = array_values( array_diff( $groups, [ '*', 'user', 'autoconfirmed' ] ) );
 		$rows[] = [
 			'wiki' => $currentWikiId,
 			'attachedMethod' => 'home',
 			'editCount' => $editCount,
 			'attachedTimestamp' => $reg,
-			'groups' => $this->userGroupManager->getUserGroups( $user ),
+			'groups' => $filteredGroups,
 			'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
 		];
 
@@ -438,7 +441,7 @@ class SpecialCentralAuth extends SpecialPage {
 			$blocker = $block->gb_by_text;
 			$expiry = $block->gb_expiry;
 			$reason = $block->gb_reason_text;
-			$timestamp = ( new MWTimestamp( $block->gb_timestamp ) )->getHumanTimestamp();
+			$timestamp = $this->getLanguage()->userTimeAndDate( $block->gb_timestamp, $this->getUser() );
 
 			$msg = $this->msg( 'mca-global-block-notice', $blocker, $expiry, $reason, $timestamp )->parse();
 			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],

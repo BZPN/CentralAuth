@@ -21,7 +21,7 @@ class Hooks {
 		$toolLinks[] = Html::element( 'a', [
 			'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $title->getText() )->getFullURL(),
 			'class' => 'mw-contributions-link-centralauth'
-		], \MediaWiki\MediaWikiServices::getInstance()->getMessageCache()->get( 'mca-global-account-info' ) );
+		], wfMessage( 'mca-global-account-info' )->text() );
 	}
 
 	public static function onMCAMergeRequestSubmitted( $requestId, $user ) {
@@ -31,10 +31,25 @@ class Hooks {
 
 		// Find users with ca-merge permission
 		$dbr = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+
+		// Find all groups that have the 'ca-merge' permission
+		$groupsWithPermission = [];
+		$permissionManager = \MediaWiki\MediaWikiServices::getInstance()->getPermissionManager();
+		$allGroups = \MediaWiki\MediaWikiServices::getInstance()->getUserGroupManager()->listAllGroups();
+		foreach ( $allGroups as $group ) {
+			if ( in_array( 'ca-merge', $permissionManager->getGroupPermissions( $group ) ) ) {
+				$groupsWithPermission[] = $group;
+			}
+		}
+
+		if ( !$groupsWithPermission ) {
+			$groupsWithPermission = [ 'sysop' ];
+		}
+
 		$res = $dbr->newSelectQueryBuilder()
 			->select( 'ug_user' )
 			->from( 'user_groups' )
-			->where( [ 'ug_group' => [ 'sysop' ] ] ) // Simplification: assume sysops have it as per extension.json
+			->where( [ 'ug_group' => $groupsWithPermission ] )
 			->fetchResultSet();
 
 		$targets = [];
@@ -51,12 +66,13 @@ class Hooks {
 					'user-id' => $user->getId(),
 				],
 				'agent' => $user,
+				'targets' => array_merge( $targets, [ $user ] ),
 			] );
 		}
 	}
 
 	public static function onMCAMergeRequestResolved( $requestId, $user, $status ) {
-		if ( !class_exists( '\EchoEvent' ) ) {
+		if ( !class_exists( '\EchoEvent' ) || !$user ) {
 			return;
 		}
 
@@ -68,6 +84,7 @@ class Hooks {
 				'status' => $status,
 			],
 			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newUnknown(),
+			'targets' => [ $user ],
 		] );
 	}
 }

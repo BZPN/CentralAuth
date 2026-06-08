@@ -24,7 +24,7 @@ class SpecialCentralAuthSettings extends SpecialPage {
 		if ( $subpage === 'add' ) {
 			$this->showAddForm();
 		} elseif ( $subpage === 'delete' ) {
-			$this->handleDelete();
+			$this->showDeleteConfirm();
 		} else {
 			$this->showFarmList();
 		}
@@ -133,13 +133,39 @@ class SpecialCentralAuthSettings extends SpecialPage {
 		return true;
 	}
 
-	private function handleDelete() {
+	private function showDeleteConfirm() {
 		$id = $this->getRequest()->getText( 'id' );
-		if ( $id ) {
-			$dbw = $this->dbProvider->getPrimaryDatabase();
-			$dbw->delete( 'mca_farms', [ 'mf_id' => $id ], __METHOD__ );
-			$dbw->delete( 'mca_farm_wikis', [ 'mfw_farm_id' => $id ], __METHOD__ );
+		if ( !$id ) {
+			$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+			return;
 		}
+
+		$formDescriptor = [
+			'id' => [
+				'type' => 'hidden',
+				'default' => $id,
+				'name' => 'id',
+			],
+			'confirm_msg' => [
+				'type' => 'info',
+				'default' => "Are you sure you want to delete farm '$id'?",
+			]
+		];
+
+		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+		$htmlForm->setSubmitText( 'Confirm Delete' );
+		$htmlForm->setSubmitDestructive( true );
+		$htmlForm->setSubmitCallback( [ $this, 'onDeleteSubmit' ] );
+		$htmlForm->show();
+	}
+
+	public function onDeleteSubmit( array $data ) {
+		$id = $data['id'];
+		$dbw = $this->dbProvider->getPrimaryDatabase();
+		$dbw->delete( 'mca_farms', [ 'mf_id' => $id ], __METHOD__ );
+		$dbw->delete( 'mca_farm_wikis', [ 'mfw_farm_id' => $id ], __METHOD__ );
+
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+		return true;
 	}
 }

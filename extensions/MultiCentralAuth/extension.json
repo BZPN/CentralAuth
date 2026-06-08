@@ -154,6 +154,7 @@
 				"destination": "agent"
 			},
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
+			"category": "mca-merge-request",
 			"group": "positive",
 			"icon": "feedback"
 		},
@@ -163,8 +164,15 @@
 				"destination": "agent"
 			},
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
+			"category": "mca-merge-request",
 			"group": "positive",
 			"icon": "feedback"
+		}
+	},
+	"EchoNotificationCategories": {
+		"mca-merge-request": {
+			"priority": 3,
+			"tooltip": "echo-category-title-mca-merge-request"
 		}
 	},
 	"manifest_version": 2
