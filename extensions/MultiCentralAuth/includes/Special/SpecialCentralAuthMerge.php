@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\MultiCentralAuth\Special;
 use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\User\UserNameUtils;
+use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
 use Wikimedia\Rdbms\IConnectionProvider;
 use MediaWiki\Html\Html;
 
@@ -12,14 +13,17 @@ class SpecialCentralAuthMerge extends SpecialPage {
 
 	private IConnectionProvider $dbProvider;
 	private UserNameUtils $userNameUtils;
+	private ExternalCAProvider $externalCAProvider;
 
 	public function __construct(
 		IConnectionProvider $dbProvider,
-		UserNameUtils $userNameUtils
+		UserNameUtils $userNameUtils,
+		ExternalCAProvider $externalCAProvider
 	) {
 		parent::__construct( 'CentralAuthMerge', 'ca-merge' );
 		$this->dbProvider = $dbProvider;
 		$this->userNameUtils = $userNameUtils;
+		$this->externalCAProvider = $externalCAProvider;
 	}
 
 	public function execute( $subpage ) {
@@ -28,8 +32,7 @@ class SpecialCentralAuthMerge extends SpecialPage {
 
 		$requestId = $this->getRequest()->getText( 'requestId' );
 		$targetUser = $this->getRequest()->getText( 'targetUser' );
-		$wmUser = $this->getRequest()->getText( 'wmUser' );
-		$mhUser = $this->getRequest()->getText( 'mhUser' );
+		$farms = $this->externalCAProvider->getFarms();
 
 		$formDescriptor = [
 			'local_user' => [
@@ -40,43 +43,26 @@ class SpecialCentralAuthMerge extends SpecialPage {
 				'default' => $targetUser,
 				'readonly' => (bool)$requestId,
 			],
-			'wm_user' => [
-				'type' => 'text',
-				'name' => 'wm_user',
-				'label-message' => 'mca-merge-wm-user',
-				'help-message' => 'mca-merge-wm-user-help',
-				'default' => $wmUser,
-			],
-			'mh_user' => [
-				'type' => 'text',
-				'name' => 'mh_user',
-				'label-message' => 'mca-merge-mh-user',
-				'help-message' => 'mca-merge-mh-user-help',
-				'default' => $mhUser,
-			],
-			'comment' => [
-				'type' => 'text',
-				'name' => 'comment',
-				'label-message' => 'mca-comment',
-				'required' => true,
-				'default' => $requestId ? "Merging... per request [[Special:CAMergeRequestQueue/view/$requestId|$requestId]]" : '',
-				'readonly' => (bool)$requestId,
-			],
 		];
 
-		// Handle other dynamic farms if passed via query params
-		$params = $this->getRequest()->getValues();
-		foreach ( $params as $key => $val ) {
-			if ( str_ends_with( $key, 'User' ) && $key !== 'targetUser' && $key !== 'wmUser' && $key !== 'mhUser' ) {
-				$farmId = substr( $key, 0, -4 );
-				$formDescriptor[$key] = [
-					'type' => 'text',
-					'name' => $key,
-					'label' => ucfirst( $farmId ) . " username",
-					'default' => $val,
-				];
-			}
+		foreach ( $farms as $farm ) {
+			$id = $farm['id'];
+			$formDescriptor["{$id}_user"] = [
+				'type' => 'text',
+				'name' => "{$id}_user",
+				'label' => "{$farm['name']} username",
+				'default' => $this->getRequest()->getText( "{$id}User" ),
+			];
 		}
+
+		$formDescriptor['comment'] = [
+			'type' => 'text',
+			'name' => 'comment',
+			'label-message' => 'mca-comment',
+			'required' => true,
+			'default' => $requestId ? "Merging... per request [[Special:CAMergeRequestQueue/view/$requestId|$requestId]]" : '',
+			'readonly' => (bool)$requestId,
+		];
 
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
@@ -85,9 +71,8 @@ class SpecialCentralAuthMerge extends SpecialPage {
 
 	public function onSubmit( array $formData ) {
 		$localUserName = $formData['local_user'];
-		$wmUserName = $formData['wm_user'] ?: null;
-		$mhUserName = $formData['mh_user'] ?: null;
 		$comment = $formData['comment'];
+		$farms = $this->externalCAProvider->getFarms();
 
 		$user = $this->userNameUtils->getCanonical( $localUserName );
 		if ( !$user ) {
@@ -105,20 +90,25 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			return [ 'mca-error-user-not-found' ];
 		}
 
-		$dbw->upsert(
-			'mca_external_ids',
-			[
-				'mei_user_id' => $localUserId,
-				'mei_wm_username' => $wmUserName,
-				'mei_mh_username' => $mhUserName,
-			],
-			[ 'mei_user_id' ],
-			[
-				'mei_wm_username' => $wmUserName,
-				'mei_mh_username' => $mhUserName,
-			],
-			__METHOD__
-		);
+		$logData = [];
+		foreach ( $farms as $farm ) {
+			$id = $farm['id'];
+			$extUser = $formData["{$id}_user"] ?? null;
+			if ( $extUser ) {
+				$dbw->upsert(
+					'mca_external_userids',
+					[
+						'meu_user_id' => $localUserId,
+						'meu_farm_id' => $id,
+						'meu_external_username' => $extUser,
+					],
+					[ 'meu_user_id', 'meu_farm_id' ],
+					[ 'meu_external_username' => $extUser ],
+					__METHOD__
+				);
+				$logData[] = "$id: $extUser";
+			}
+		}
 
 		// Log action
 		$targetUser = \MediaWiki\User\User::newFromName( $localUserName );
@@ -128,7 +118,7 @@ class SpecialCentralAuthMerge extends SpecialPage {
 				'merge',
 				$targetUser->getUserPage(),
 				$comment,
-				[ $wmUserName ?? '', $mhUserName ?? '', $this->getUser()->getName() ],
+				[ implode( ', ', $logData ), $this->getUser()->getName() ],
 				$this->getUser()
 			);
 		}

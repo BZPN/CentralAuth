@@ -6,7 +6,6 @@ use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Html\Html;
 use MediaWiki\User\UserFactory;
-use MediaWiki\Utils\MWTimestamp;
 use Wikimedia\Rdbms\IConnectionProvider;
 
 class SpecialCAMergeRequestQueue extends SpecialPage {
@@ -58,7 +57,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 				Html::element( 'td', [], $row->mmr_id ) .
 				Html::element( 'td', [], $user ? $user->getName() : 'Unknown' ) .
 				Html::element( 'td', [], $row->mmr_status ) .
-				Html::element( 'td', [], ( new MWTimestamp( $row->mmr_timestamp ) )->getHumanTimestamp() ) .
+				Html::element( 'td', [], $this->getLanguage()->userTimeAndDate( $row->mmr_timestamp, $this->getUser() ) ) .
 				Html::rawElement( 'td', [], Html::element( 'a', [
 					'href' => $this->getPageTitle( "view/{$row->mmr_id}" )->getFullURL()
 				], 'View' ) ) .
