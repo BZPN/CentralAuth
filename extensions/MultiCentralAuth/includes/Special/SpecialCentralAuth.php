@@ -3,23 +3,25 @@
 namespace MediaWiki\Extension\MultiCentralAuth\Special;
 
 use MediaWiki\Block\BlockManager;
-use MediaWiki\CommentFormatter\CommentFormatter;
 use MediaWiki\Extension\MultiCentralAuth\ExternalCAProvider;
 use MediaWiki\Html\Html;
 use MediaWiki\MainConfigNames;
 use MediaWiki\SpecialPage\SpecialPage;
-use MediaWiki\Title\NamespaceInfo;
+use MediaWiki\Title\Title;
 use MediaWiki\User\UserFactory;
 use MediaWiki\User\UserGroupManager;
 use MediaWiki\User\UserNameUtils;
+use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
+use OOUI\FieldsetLayout;
+use OOUI\HtmlSnippet;
+use OOUI\PanelLayout;
+use OOUI\Widget;
 use Wikimedia\Rdbms\IConnectionProvider;
 
 class SpecialCentralAuth extends SpecialPage {
 
-	private CommentFormatter $commentFormatter;
 	private IConnectionProvider $dbProvider;
-	private NamespaceInfo $namespaceInfo;
 	private UserFactory $userFactory;
 	private UserNameUtils $userNameUtils;
 	private ExternalCAProvider $externalCAProvider;
@@ -27,9 +29,7 @@ class SpecialCentralAuth extends SpecialPage {
 	private BlockManager $blockManager;
 
 	public function __construct(
-		CommentFormatter $commentFormatter,
 		IConnectionProvider $dbProvider,
-		NamespaceInfo $namespaceInfo,
 		UserFactory $userFactory,
 		UserNameUtils $userNameUtils,
 		ExternalCAProvider $externalCAProvider,
@@ -37,9 +37,7 @@ class SpecialCentralAuth extends SpecialPage {
 		BlockManager $blockManager
 	) {
 		parent::__construct( 'CentralAuth' );
-		$this->commentFormatter = $commentFormatter;
 		$this->dbProvider = $dbProvider;
-		$this->namespaceInfo = $namespaceInfo;
 		$this->userFactory = $userFactory;
 		$this->userNameUtils = $userNameUtils;
 		$this->externalCAProvider = $externalCAProvider;
@@ -49,22 +47,25 @@ class SpecialCentralAuth extends SpecialPage {
 
 	public function execute( $subpage ) {
 		$this->setHeaders();
-		$this->getOutput()->addModuleStyles( 'ext.multicentralauth.styles' );
+		$this->getOutput()->addModuleStyles( [
+			'mediawiki.codex.messagebox.styles',
+			'ext.multicentralauth.styles'
+		] );
+		$this->getOutput()->addModules( 'ext.multicentralauth.js' );
 
 		$target = $this->getRequest()->getText( 'target', $subpage );
+
+		$this->showUsernameForm( $target );
+
 		if ( !$target ) {
-			$this->showUsernameForm();
 			return;
 		}
 
 		$user = $this->userFactory->newFromName( $target );
 		if ( !$user || !$user->isRegistered() ) {
-			$this->getOutput()->addWikiMsg( 'mca-error-user-not-found' );
-			$this->showUsernameForm();
+			$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-error-user-not-found' )->parse() ) );
 			return;
 		}
-
-		$this->showUsernameForm( $target );
 
 		// 1. Local Wiki Data
 		$this->showLocalData( $user );
@@ -89,48 +90,52 @@ class SpecialCentralAuth extends SpecialPage {
 	}
 
 	private function showUsernameForm( $default = '' ) {
-		$this->getOutput()->addHTML(
-			Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
-				Html::element( 'label', [ 'for' => 'mca-target' ], $this->msg( 'mca-target-label' )->text() ) .
+		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
+			Html::rawElement( 'div', [],
+				Html::element( 'label', [ 'for' => 'mca-target' ], $this->msg( 'mca-target-label' )->text() ) . ' ' .
 				Html::input( 'target', $default, 'text', [ 'id' => 'mca-target', 'size' => 40 ] ) . ' ' .
 				Html::submitButton( $this->msg( 'mca-submit' )->text(), [ 'id' => 'mca-submit' ] )
 			)
 		);
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $form, 'mca-header-view' ) );
 	}
 
 	private function showLocalData( $user ) {
-		$this->getOutput()->addHTML( '<h2>' . $this->msg( 'mca-header-local' )->escaped() . '</h2>' );
+		$localWikiName = $this->getConfig()->get( MainConfigNames::Sitename );
+		$currentWikiId = WikiMap::getCurrentWikiId();
 
 		$attachedWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
-		$currentWiki = WikiMap::getCurrentWikiId();
+		$wikisToShow = array_unique( array_merge( [ $currentWikiId ], $attachedWikis ) );
 
-		// Always include current wiki if user is registered here (which they are if we got here)
-		$wikisToShow = array_unique( array_merge( [ $currentWiki ], $attachedWikis ) );
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		$userData = $dbr->newSelectQueryBuilder()
+			->select( [ 'user_editcount', 'user_registration' ] )
+			->from( 'user' )
+			->where( [ 'user_id' => $user->getId() ] )
+			->fetchRow();
+
+		$reg = $userData ? $userData->user_registration : '';
+		$editCount = $userData ? (int)$userData->user_editcount : 0;
+
+		$info = $this->formatUserInfo( $user->getName(), $reg, $editCount );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $localWikiName ] ) );
 
 		$rows = [];
 		foreach ( $wikisToShow as $wikiId ) {
-			// In a real multi-wiki setup we would fetch data from other DBs.
-			// Here we can only reliably show data for the current wiki.
-			if ( $wikiId === $currentWiki ) {
-				$dbr = $this->dbProvider->getReplicaDatabase();
-				$userData = $dbr->newSelectQueryBuilder()
-					->select( [ 'user_editcount', 'user_registration' ] )
-					->from( 'user' )
-					->where( [ 'user_id' => $user->getId() ] )
-					->fetchRow();
-
+			if ( $wikiId === $currentWikiId ) {
 				$rows[] = [
 					'wiki' => $wikiId,
 					'attachedMethod' => 'home',
-					'editCount' => $userData ? (int)$userData->user_editcount : 0,
-					'attachedTimestamp' => $userData ? $userData->user_registration : '',
+					'editCount' => $editCount,
+					'attachedTimestamp' => $reg,
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
 					'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
 				];
 			} else {
 				$rows[] = [
 					'wiki' => $wikiId,
-					'attachedMethod' => 'local', // Placeholder
+					'attachedMethod' => 'local',
 					'editCount' => 0,
 					'attachedTimestamp' => '',
 					'groups' => [],
@@ -139,11 +144,23 @@ class SpecialCentralAuth extends SpecialPage {
 			}
 		}
 
-		$this->renderTable( $rows );
+		$table = $this->renderTable( $rows, $user->getName() );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $localWikiName ] ) );
 	}
 
 	private function showExternalData( array $data, string $sourceName ) {
-		$this->getOutput()->addHTML( '<h2>' . $this->msg( 'mca-header-external', $sourceName )->escaped() . '</h2>' );
+		$username = $data['name'];
+		$reg = $data['registration'] ?? '';
+		$editCount = $data['editcount'] ?? 0;
+		$globalGroups = $data['groups'] ?? [];
+
+		$sumEditCount = 0;
+		foreach ( $data['merged'] as $m ) {
+			$sumEditCount += $m['editcount'];
+		}
+
+		$info = $this->formatUserInfo( $username, $reg, $editCount, $sumEditCount, count( $data['merged'] ), $globalGroups );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $sourceName ] ) );
 
 		$rows = [];
 		foreach ( $data['merged'] as $merged ) {
@@ -153,16 +170,49 @@ class SpecialCentralAuth extends SpecialPage {
 				'attachedMethod' => $merged['method'],
 				'editCount' => $merged['editcount'],
 				'attachedTimestamp' => $merged['timestamp'],
-				'groups' => [], // API meta=globaluserinfo doesn't give per-wiki groups easily in 'merged'
+				'groups' => $merged['groups'] ?? [],
 				'blocked' => isset( $merged['blocked'] ),
 			];
 		}
 
-		$this->renderTable( $rows );
+		$table = $this->renderTable( $rows, $username );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $sourceName ] ) );
 	}
 
-	private function renderTable( array $rows ) {
-		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist' ] );
+	private function formatUserInfo( $username, $reg, $editCount, $sumEditCount = null, $attachedCount = null, $globalGroups = [] ) {
+		$lang = $this->getLanguage();
+		$prettyReg = '';
+		if ( $reg ) {
+			$ts = new MWTimestamp( $reg );
+			$prettyReg = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() ) . ' (' . $lang->getHumanTimestamp( $ts ) . ')';
+		}
+
+		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
+		$html .= Html::rawElement( 'div', [], $this->msg( 'mca-username', Html::element( 'b', [], $username ) )->parse() );
+		$html .= Html::openElement( 'ul' );
+		if ( $prettyReg ) {
+			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-registered', $prettyReg )->parse() );
+		}
+		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-editcount', $lang->formatNum( $editCount ) )->parse() );
+
+		if ( $sumEditCount !== null ) {
+			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-editcount-sum', $lang->formatNum( $sumEditCount ) )->parse() );
+		}
+		if ( $attachedCount !== null ) {
+			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-attached-count', $lang->formatNum( $attachedCount ) )->parse() );
+		}
+		if ( $globalGroups ) {
+			$html .= Html::rawElement( 'li', [], $this->msg( 'centralauth-admin-list-groups' )->text() . ': ' . $lang->commaList( $globalGroups ) );
+		}
+
+		$html .= Html::closeElement( 'ul' );
+		$html .= Html::closeElement( 'div' );
+		return $html;
+	}
+
+	private function renderTable( array $rows, $username ) {
+		$lang = $this->getLanguage();
+		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
 		$html .= Html::openElement( 'thead' ) . Html::openElement( 'tr' );
 		foreach ( [ 'localwiki', 'attached-on', 'method', 'blocked', 'editcount', 'groups' ] as $col ) {
 			$html .= Html::element( 'th', [], $this->msg( "centralauth-admin-list-$col" )->text() );
@@ -174,42 +224,98 @@ class SpecialCentralAuth extends SpecialPage {
 			$html .= Html::openElement( 'tr' );
 
 			// Wiki
-			$wikiName = $row['wiki'];
-			if ( isset( $row['url'] ) ) {
-				$wikiDisplay = Html::element( 'a', [ 'href' => $row['url'] ], $wikiName );
+			$wikiId = $row['wiki'];
+			$url = $row['url'] ?? null;
+
+			if ( $url ) {
+				$userPageUrl = rtrim( $url, '/' ) . '/wiki/User:' . urlencode( $username );
+				$wikiDisplay = Html::element( 'a', [ 'href' => $userPageUrl ], $wikiId );
 			} else {
-				$wikiDisplay = htmlspecialchars( $wikiName );
+				// Local wiki or attached local wiki
+				$localUserPage = Title::makeTitle( NS_USER, $username );
+				$wikiDisplay = Html::element( 'a', [ 'href' => $localUserPage->getFullURL() ], $wikiId );
 			}
 			$html .= Html::rawElement( 'td', [], $wikiDisplay );
 
 			// Attached on
-			$html .= Html::element( 'td', [], $row['attachedTimestamp'] );
+			$reg = $row['attachedTimestamp'];
+			if ( $reg ) {
+				$ts = new MWTimestamp( $reg );
+				$formattedReg = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() );
+			} else {
+				$formattedReg = '';
+			}
+			$html .= Html::element( 'td', [], $formattedReg );
 
 			// Method
 			$method = $row['attachedMethod'];
-			$icon = Html::element( 'img', [
-				'src' => $this->getConfig()->get( MainConfigNames::ExtensionAssetsPath ) . "/MultiCentralAuth/resources/icons/merged-$method.png",
-				'alt' => $method,
-				'title' => $method,
-			] );
-			if ( !in_array( $method, [ 'primary', 'new', 'empty', 'password', 'mail', 'admin', 'login' ] ) ) {
-				$icon = htmlspecialchars( $method );
+			if ( $method === 'email' ) {
+				$method = 'mail';
 			}
-			$html .= Html::rawElement( 'td', [], $icon );
+			$iconName = $method === 'home' ? 'primary' : $method;
+			$iconPath = $this->getConfig()->get( MainConfigNames::ExtensionAssetsPath ) . "/MultiCentralAuth/resources/icons/merged-$iconName.png";
+
+			$brief = $this->msg( "centralauth-merge-method-$iconName" )->text();
+			$icon = Html::element( 'img', [
+				'src' => $iconPath,
+				'alt' => $brief,
+				'title' => $brief,
+			] ) . Html::element( 'span', [
+				'class' => 'merge-method-help',
+				'title' => $brief,
+				'data-centralauth-mergemethod' => $iconName,
+				'style' => 'cursor: help;'
+			], $this->msg( 'centralauth-merge-method-questionmark' )->text() );
+
+			$html .= Html::rawElement( 'td', [ 'class' => 'mw-centralauth-wikislist-method' ], $icon );
 
 			// Blocked
-			$html .= Html::element( 'td', [], $row['blocked'] ? $this->msg( 'centralauth-admin-yes' )->text() : $this->msg( 'centralauth-admin-notblocked' )->text() );
+			if ( $row['blocked'] ) {
+				$blockLogUrl = $url ? rtrim( $url, '/' ) . '/wiki/Special:Log/block?page=User:' . urlencode( $username ) :
+					SpecialPage::getTitleFor( 'Log', 'block' )->getFullURL( [ 'page' => 'User:' . $username ] );
+				$blockedDisplay = Html::element( 'a', [ 'href' => $blockLogUrl ], $this->msg( 'centralauth-admin-yes' )->text() );
+			} else {
+				$blockedDisplay = $this->msg( 'centralauth-admin-notblocked' )->text();
+			}
+			$html .= Html::rawElement( 'td', [], $blockedDisplay );
 
 			// Editcount
-			$html .= Html::element( 'td', [], $row['editCount'] );
+			$contribsUrl = $url ? rtrim( $url, '/' ) . '/wiki/Special:Contributions/' . urlencode( $username ) :
+				SpecialPage::getTitleFor( 'Contributions', $username )->getFullURL();
+			$editCountDisplay = Html::element( 'a', [ 'href' => $contribsUrl ], $lang->formatNum( $row['editCount'] ) );
+			$html .= Html::rawElement( 'td', [ 'class' => 'mw-centralauth-wikislist-editcount' ], $editCountDisplay );
 
 			// Groups
-			$html .= Html::element( 'td', [], implode( ', ', $row['groups'] ) );
+			$html .= Html::element( 'td', [], $lang->commaList( $row['groups'] ) );
 
 			$html .= Html::closeElement( 'tr' );
 		}
 
 		$html .= Html::closeElement( 'tbody' ) . Html::closeElement( 'table' );
-		$this->getOutput()->addHTML( $html );
+		return $html;
+	}
+
+	private function getFramedFieldsetLayout( $html, $legendMsg ): string {
+		if ( is_array( $legendMsg ) ) {
+			$label = $this->msg( ...$legendMsg )->text();
+		} else {
+			$label = $this->msg( $legendMsg )->text();
+		}
+
+		$fieldset = new FieldsetLayout( [
+			'label' => $label,
+			'items' => [
+				new Widget( [
+					'content' => new HtmlSnippet( $html ),
+				] ),
+			],
+		] );
+		return (string)new PanelLayout( [
+			'classes' => [ 'mw-htmlform-ooui-wrapper' ],
+			'expanded' => false,
+			'padded' => true,
+			'framed' => true,
+			'content' => $fieldset,
+		] );
 	}
 }

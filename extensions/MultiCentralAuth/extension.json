@@ -23,9 +23,7 @@
 		"CentralAuth": {
 			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuth",
 			"services": [
-				"CommentFormatter",
 				"ConnectionProvider",
-				"NamespaceInfo",
 				"UserFactory",
 				"UserNameUtils",
 				"MultiCentralAuth.ExternalCAProvider",
@@ -65,6 +63,28 @@
 	"ResourceModules": {
 		"ext.multicentralauth.styles": {
 			"styles": "resources/main.less"
+		},
+		"ext.multicentralauth.js": {
+			"scripts": "resources/ext.multicentralauth.js",
+			"dependencies": [
+				"mediawiki.util"
+			],
+			"messages": [
+				"centralauth-merge-method-primary",
+				"centralauth-merge-method-primary-desc",
+				"centralauth-merge-method-new",
+				"centralauth-merge-method-new-desc",
+				"centralauth-merge-method-empty",
+				"centralauth-merge-method-empty-desc",
+				"centralauth-merge-method-password",
+				"centralauth-merge-method-password-desc",
+				"centralauth-merge-method-mail",
+				"centralauth-merge-method-mail-desc",
+				"centralauth-merge-method-admin",
+				"centralauth-merge-method-admin-desc",
+				"centralauth-merge-method-login",
+				"centralauth-merge-method-login-desc"
+			]
 		}
 	},
 	"ResourceFileModulePaths": {
