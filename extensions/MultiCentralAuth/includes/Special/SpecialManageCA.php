@@ -13,7 +13,6 @@ use MediaWiki\Utils\MWTimestamp;
 use MediaWiki\WikiMap\WikiMap;
 use Wikimedia\Rdbms\IConnectionProvider;
 use MediaWiki\Html\Html;
-use MediaWiki\Html\Xml;
 
 class SpecialManageCA extends SpecialPage {
 
@@ -148,7 +147,7 @@ class SpecialManageCA extends SpecialPage {
 			$deleteContent .= Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
 				'name' => 'delete_selected',
 				'class' => 'mw-ui-button mw-ui-destructive',
-				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
+				'onclick' => "return confirm('" . \Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
 			] );
 			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $deleteContent, 'mca-manage-delete-selected', 'mca-header-type-delete' ) );
 		}
