@@ -53,8 +53,7 @@ class SpecialManageCA extends SpecialPage {
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		if ( !$externalUsernames['wm'] && !$externalUsernames['mh'] ) {
-			$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
-			return;
+			$this->getOutput()->addHTML( Html::warningBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
 		}
 
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
@@ -262,7 +261,7 @@ class SpecialManageCA extends SpecialPage {
 		$lang = $this->getLanguage();
 		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
 		$html .= Html::openElement( 'thead' ) . Html::openElement( 'tr' );
-		$html .= Html::element( 'th', [], '' ); // Checkbox column first
+		$html .= Html::rawElement( 'th', [], '&nbsp;' ); // Checkbox column first
 		foreach ( [ 'localwiki', 'attached-on', 'method' ] as $col ) {
 			$html .= Html::element( 'th', [], $this->msg( "centralauth-admin-list-$col" )->text() );
 		}
@@ -278,7 +277,8 @@ class SpecialManageCA extends SpecialPage {
 				$checkbox = Html::element( 'input', [
 					'type' => 'checkbox',
 					'name' => 'remove_wikis[]',
-					'value' => $row['host']
+					'value' => $row['host'],
+					'class' => 'mw-ui-checkbox'
 				] );
 			}
 			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
@@ -349,7 +349,7 @@ class SpecialManageCA extends SpecialPage {
 			$label = $this->msg( $legendMsg )->text();
 		}
 		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
-			Html::rawElement( 'h2', [ 'class' => 'oo-ui-fieldsetLayout-header', 'style' => 'margin-top: 0; font-size: 1.2em; font-weight: bold; padding-bottom: 0.3em; margin-bottom: 0.5em;' ], $label ) .
+			Html::rawElement( 'h2', [ 'class' => 'mca-box-header' ], $label ) .
 			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
 		);
 	}
