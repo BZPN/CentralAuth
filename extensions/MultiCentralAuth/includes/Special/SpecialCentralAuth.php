@@ -69,43 +69,58 @@ class SpecialCentralAuth extends SpecialPage {
 			return;
 		}
 
-		// 1. Local Wiki Data
-		$this->showLocalData( $user );
-
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
+		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
+
+		// 1. Local Wiki Data
+		$localManual = [];
+		foreach ( $manualWikis as $wiki ) {
+			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'local' ) {
+				$localManual[] = $wiki;
+			}
+		}
+		$this->showLocalData( $user, $localManual );
 
 		// 2. Wikimedia Data
-		if ( $externalUsernames['wm'] ) {
-			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] );
-			if ( $wmData ) {
-				$this->showExternalData( $wmData, 'Wikimedia', 'mca-header-list-wm' );
+		$wmManual = [];
+		foreach ( $manualWikis as $wiki ) {
+			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'wm' ) {
+				$wmManual[] = $wiki;
 			}
+		}
+		if ( $externalUsernames['wm'] || $wmManual ) {
+			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
+			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
 		}
 
 		// 3. Miraheze Data
-		if ( $externalUsernames['mh'] ) {
-			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] );
-			if ( $mhData ) {
-				$this->showExternalData( $mhData, 'Miraheze', 'mca-header-list-mh' );
+		$mhManual = [];
+		foreach ( $manualWikis as $wiki ) {
+			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'mh' ) {
+				$mhManual[] = $wiki;
 			}
+		}
+		if ( $externalUsernames['mh'] || $mhManual ) {
+			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
+			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
 		}
 	}
 
 	private function showUsernameForm( $default = '' ) {
 		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
-			Html::rawElement( 'div', [],
+			Html::rawElement( 'div', [ 'style' => 'display: flex; align-items: center; gap: 0.5em;' ],
 				Html::rawElement( 'label', [ 'for' => 'mca-target', 'class' => 'mw-ui-message' ],
 					$this->msg( 'mca-target-label' )->text() . ' <span class="mw-ui-required">*</span>'
-				) . ' ' .
+				) .
 				Html::input( 'target', $default, 'text', [
 					'id' => 'mca-target',
 					'class' => 'mw-ui-input mw-ui-input-inline',
 					'size' => 40,
 					'required' => 'required'
-				] ) . ' ' .
-				Html::submitButton( $this->msg( 'mca-header-view' )->text(), [
+				] ) .
+				Html::submitButton( $this->msg( 'mca-view-user-info' )->text(), [
 					'id' => 'mca-submit',
-					'class' => 'mw-ui-button mw-ui-progressive mw-ui-big'
+					'class' => 'mw-ui-button mw-ui-progressive'
 				] )
 			)
 		);
@@ -113,12 +128,9 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $form, 'mca-header-view' ) );
 	}
 
-	private function showLocalData( $user ) {
+	private function showLocalData( $user, array $manualWikis ) {
 		$localWikiName = $this->getConfig()->get( MainConfigNames::Sitename );
 		$currentWikiId = WikiMap::getCurrentWikiId();
-
-		$attachedWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
-		$wikisToShow = array_unique( array_merge( [ $currentWikiId ], $attachedWikis ) );
 
 		$dbr = $this->dbProvider->getReplicaDatabase();
 		$userData = $dbr->newSelectQueryBuilder()
@@ -134,19 +146,34 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $localWikiName ] ) );
 
 		$rows = [];
-		foreach ( $wikisToShow as $wikiId ) {
-			if ( $wikiId === $currentWikiId ) {
+		// Always show home wiki
+		$rows[] = [
+			'wiki' => $currentWikiId,
+			'attachedMethod' => 'home',
+			'editCount' => $editCount,
+			'attachedTimestamp' => $reg,
+			'groups' => $this->userGroupManager->getUserGroups( $user ),
+			'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
+		];
+
+		foreach ( $manualWikis as $wikiHost ) {
+			if ( $wikiHost === $currentWikiId ) {
+				continue;
+			}
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() );
+			if ( $metadata ) {
 				$rows[] = [
-					'wiki' => $wikiId,
-					'attachedMethod' => 'home',
-					'editCount' => $editCount,
-					'attachedTimestamp' => $reg,
-					'groups' => $this->userGroupManager->getUserGroups( $user ),
-					'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
+					'wiki' => $wikiHost,
+					'url' => "https://$wikiHost/",
+					'attachedMethod' => 'local',
+					'editCount' => $metadata['editcount'],
+					'attachedTimestamp' => $metadata['registration'],
+					'groups' => $metadata['groups'],
+					'blocked' => $metadata['blocked'],
 				];
 			} else {
 				$rows[] = [
-					'wiki' => $wikiId,
+					'wiki' => $wikiHost,
 					'attachedMethod' => 'local',
 					'editCount' => 0,
 					'attachedTimestamp' => '',
@@ -160,32 +187,54 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $localWikiName ] ) );
 	}
 
-	private function showExternalData( array $data, string $sourceName, string $tableHeaderMsg ) {
-		$username = $data['name'];
+	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis ) {
 		$reg = $data['registration'] ?? '';
 		$editCount = $data['editcount'] ?? 0;
 		$globalGroups = $data['groups'] ?? [];
 
-		$sumEditCount = 0;
-		foreach ( $data['merged'] as $m ) {
-			$sumEditCount += $m['editcount'];
-		}
-
-		$info = $this->formatUserInfo( $username, $reg, $editCount, $sumEditCount, count( $data['merged'] ), $globalGroups );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $sourceName ] ) );
-
+		$merged = $data['merged'] ?? [];
 		$rows = [];
-		foreach ( $data['merged'] as $merged ) {
+		$sumEditCount = 0;
+		$attachedWikis = [];
+
+		foreach ( $merged as $m ) {
 			$rows[] = [
-				'wiki' => $merged['wiki'],
-				'url' => $merged['url'],
-				'attachedMethod' => $merged['method'],
-				'editCount' => $merged['editcount'],
-				'attachedTimestamp' => $merged['timestamp'],
-				'groups' => $merged['groups'] ?? [],
-				'blocked' => isset( $merged['blocked'] ),
+				'wiki' => $m['wiki'],
+				'url' => $m['url'],
+				'attachedMethod' => $m['method'],
+				'editCount' => $m['editcount'],
+				'attachedTimestamp' => $m['timestamp'],
+				'groups' => $m['groups'] ?? [],
+				'blocked' => isset( $m['blocked'] ),
 			];
+			$sumEditCount += $m['editcount'];
+			$parsedUrl = parse_url( $m['url'] );
+			if ( isset( $parsedUrl['host'] ) ) {
+				$attachedWikis[] = $parsedUrl['host'];
+			}
 		}
+
+		foreach ( $manualWikis as $wikiHost ) {
+			if ( in_array( $wikiHost, $attachedWikis ) ) {
+				continue;
+			}
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $username );
+			if ( $metadata ) {
+				$rows[] = [
+					'wiki' => $wikiHost,
+					'url' => "https://$wikiHost/",
+					'attachedMethod' => 'local',
+					'editCount' => $metadata['editcount'],
+					'attachedTimestamp' => $metadata['registration'],
+					'groups' => $metadata['groups'],
+					'blocked' => $metadata['blocked'],
+				];
+				$sumEditCount += $metadata['editcount'];
+			}
+		}
+
+		$info = $this->formatUserInfo( $username, $reg, $editCount, $sumEditCount, count( $rows ), $globalGroups );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $info, [ 'mca-header-info', $sourceName ] ) );
 
 		$table = $this->renderTable( $rows, $username );
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg ) );
@@ -197,7 +246,7 @@ class SpecialCentralAuth extends SpecialPage {
 		if ( $reg ) {
 			$ts = new MWTimestamp( $reg );
 			$date = $lang->userTimeAndDate( $ts->getTimestamp(), $this->getUser() );
-			$ago = $lang->getHumanTimestamp( $ts, null, $this->getUser() );
+			$ago = $ts->getRelativeTimestamp();
 			$prettyReg = $date . ' (' . $ago . ')';
 		}
 
