@@ -73,7 +73,7 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 		);
 
 		// Log action
-		$targetUser = \MediaWiki\User\User::newFromName( $localUserName );
+		$targetUser = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromName( $localUserName );
 		if ( $targetUser ) {
 			$logEntry = new \LogPage( 'mca-log' );
 			$logEntry->addEntry(

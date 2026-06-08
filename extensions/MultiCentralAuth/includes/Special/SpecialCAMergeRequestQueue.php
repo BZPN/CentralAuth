@@ -39,6 +39,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			->select( '*' )
 			->from( 'mca_merge_requests' )
 			->orderBy( "CASE WHEN mmr_status = 'open' THEN 0 ELSE 1 END", 'ASC' )
+			->orderBy( 'mmr_user_id', 'ASC' )
 			->orderBy( 'mmr_timestamp', 'DESC' )
 			->fetchResultSet();
 
