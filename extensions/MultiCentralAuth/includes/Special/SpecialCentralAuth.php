@@ -74,7 +74,7 @@ class SpecialCentralAuth extends SpecialPage {
 		if ( $externalUsernames['wm'] ) {
 			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] );
 			if ( $wmData ) {
-				$this->showExternalData( $wmData, 'Wikimedia' );
+				$this->showExternalData( $wmData, 'Wikimedia', 'mca-header-list-wm' );
 			}
 		}
 
@@ -82,7 +82,7 @@ class SpecialCentralAuth extends SpecialPage {
 		if ( $externalUsernames['mh'] ) {
 			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] );
 			if ( $mhData ) {
-				$this->showExternalData( $mhData, 'Miraheze' );
+				$this->showExternalData( $mhData, 'Miraheze', 'mca-header-list-mh' );
 			}
 		}
 	}
@@ -91,8 +91,8 @@ class SpecialCentralAuth extends SpecialPage {
 		$form = Html::rawElement( 'form', [ 'action' => $this->getPageTitle()->getLocalURL(), 'method' => 'get' ],
 			Html::rawElement( 'div', [],
 				Html::element( 'label', [ 'for' => 'mca-target' ], $this->msg( 'mca-target-label' )->text() ) . ' ' .
-				Html::input( 'target', $default, 'text', [ 'id' => 'mca-target', 'size' => 40 ] ) . ' ' .
-				Html::submitButton( $this->msg( 'mca-submit' )->text(), [ 'id' => 'mca-submit' ] )
+				Html::input( 'target', $default, 'text', [ 'id' => 'mca-target', 'class' => 'mw-ui-input mw-ui-input-inline', 'size' => 40 ] ) . ' ' .
+				Html::submitButton( $this->msg( 'mca-header-view' )->text(), [ 'id' => 'mca-submit', 'class' => 'mw-ui-button mw-ui-progressive' ] )
 			)
 		);
 
@@ -146,7 +146,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $localWikiName ] ) );
 	}
 
-	private function showExternalData( array $data, string $sourceName ) {
+	private function showExternalData( array $data, string $sourceName, string $tableHeaderMsg ) {
 		$username = $data['name'];
 		$reg = $data['registration'] ?? '';
 		$editCount = $data['editcount'] ?? 0;
@@ -174,7 +174,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$table = $this->renderTable( $rows, $username );
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, [ 'mca-header-info', $sourceName ] ) );
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg ) );
 	}
 
 	private function formatUserInfo( $username, $reg, $editCount, $sumEditCount = null, $attachedCount = null, $globalGroups = [] ) {
@@ -186,8 +186,8 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
-		$html .= Html::rawElement( 'div', [], $this->msg( 'mca-username', Html::element( 'b', [], $username ) )->parse() );
 		$html .= Html::openElement( 'ul' );
+		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-username', $username )->parse() );
 		if ( $prettyReg ) {
 			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-registered', $prettyReg )->parse() );
 		}
@@ -200,7 +200,7 @@ class SpecialCentralAuth extends SpecialPage {
 			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-attached-count', $lang->formatNum( $attachedCount ) )->parse() );
 		}
 		if ( $globalGroups ) {
-			$html .= Html::rawElement( 'li', [], $this->msg( 'centralauth-admin-list-groups' )->text() . ': ' . $lang->commaList( $globalGroups ) );
+			$html .= Html::rawElement( 'li', [], $this->msg( 'mca-global-groups', $lang->commaList( $globalGroups ) )->parse() );
 		}
 
 		$html .= Html::closeElement( 'ul' );
@@ -224,14 +224,17 @@ class SpecialCentralAuth extends SpecialPage {
 			// Wiki
 			$wikiId = $row['wiki'];
 			$url = $row['url'] ?? null;
+			$wikiDisplayId = $wikiId;
 
 			if ( $url ) {
+				$parsedUrl = parse_url( $url );
+				$wikiDisplayId = $parsedUrl['host'] ?? $wikiId;
 				$userPageUrl = rtrim( $url, '/' ) . '/wiki/User:' . urlencode( $username );
-				$wikiDisplay = Html::element( 'a', [ 'href' => $userPageUrl ], $wikiId );
+				$wikiDisplay = Html::element( 'a', [ 'href' => $userPageUrl ], $wikiDisplayId );
 			} else {
 				// Local wiki or attached local wiki
 				$localUserPage = Title::makeTitle( NS_USER, $username );
-				$wikiDisplay = Html::element( 'a', [ 'href' => $localUserPage->getFullURL() ], $wikiId );
+				$wikiDisplay = Html::element( 'a', [ 'href' => $localUserPage->getFullURL() ], $wikiDisplayId );
 			}
 			$html .= Html::rawElement( 'td', [], $wikiDisplay );
 
@@ -300,7 +303,7 @@ class SpecialCentralAuth extends SpecialPage {
 			$label = $this->msg( $legendMsg )->text();
 		}
 
-		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ],
+		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
 			Html::rawElement( 'fieldset', [ 'class' => 'oo-ui-fieldsetLayout' ],
 				Html::element( 'legend', [ 'class' => 'oo-ui-fieldsetLayout-header' ], $label ) .
 				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
