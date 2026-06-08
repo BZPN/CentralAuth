@@ -36,7 +36,7 @@
 	"centralauth-merge-method-login": "login",
 	"centralauth-merge-method-login-desc": "The local account was automatically created when the user logged in.",
 	"centralauth-merge-method-questionmark": "(?)",
-	"mca-target-label": "User name:",
+	"mca-target-label": "Username:",
 	"mca-submit": "Show",
 	"mca-header-info": "$1 account information",
 	"mca-header-view": "View account information",
