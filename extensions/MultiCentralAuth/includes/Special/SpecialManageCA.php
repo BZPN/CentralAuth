@@ -54,6 +54,7 @@ class SpecialManageCA extends SpecialPage {
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		if ( !$externalUsernames['wm'] && !$externalUsernames['mh'] ) {
 			$this->getOutput()->addHTML( Html::errorBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
+			return;
 		}
 
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
@@ -74,49 +75,13 @@ class SpecialManageCA extends SpecialPage {
 			return;
 		}
 
-		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
-		$this->getOutput()->addHTML( Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() ) );
-
-		// 1. Wikimedia Data
-		$wmManual = [];
-		foreach ( $manualWikis as $wiki ) {
-			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'wm' ) {
-				$wmManual[] = $wiki;
-			}
-		}
-		if ( $externalUsernames['wm'] || $wmManual ) {
-			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
-			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
-		}
-
-		// 2. Miraheze Data
-		$mhManual = [];
-		foreach ( $manualWikis as $wiki ) {
-			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === 'mh' ) {
-				$mhManual[] = $wiki;
-			}
-		}
-		if ( $externalUsernames['mh'] || $mhManual ) {
-			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
-			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
-		}
-
-		if ( $wmManual || $mhManual ) {
-			$this->getOutput()->addHTML( Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
-				'name' => 'delete_selected',
-				'class' => 'mw-ui-button mw-ui-destructive',
-				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
-			] ) );
-		}
-
-		$this->getOutput()->addHTML( Html::closeElement( 'form' ) );
-
-		// Instructions
+		// 1. Instructions
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout(
 			Html::element( 'p', [], $this->msg( 'mca-manage-instructions' )->text() ),
 			'manageca'
 		) );
 
+		// 2. Add form
 		$formDescriptor = [
 			'subdomain' => [
 				'type' => 'text',
@@ -145,6 +110,48 @@ class SpecialManageCA extends SpecialPage {
 		$htmlForm->prepareForm();
 		$status = $htmlForm->tryAuthorizedSubmit();
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'mca-manage-action-add' ) );
+
+		// 3. Tables with checkboxes
+		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
+		$this->getOutput()->addHTML( Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() ) );
+
+		$wmManual = [];
+		$mhManual = [];
+		$otherManual = [];
+		foreach ( $manualWikis as $wiki ) {
+			$cat = $this->externalCAProvider->categorizeWiki( $wiki );
+			if ( $cat === 'wm' ) {
+				$wmManual[] = $wiki;
+			} elseif ( $cat === 'mh' ) {
+				$mhManual[] = $wiki;
+			} else {
+				$otherManual[] = $wiki;
+			}
+		}
+
+		if ( $externalUsernames['wm'] || $wmManual ) {
+			$wmData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.wikimedia.org/w/api.php', $externalUsernames['wm'] ?? '' );
+			$this->showExternalData( $wmData, $externalUsernames['wm'] ?? $user->getName(), 'Wikimedia', 'mca-header-list-wm', $wmManual );
+		}
+
+		if ( $externalUsernames['mh'] || $mhManual ) {
+			$mhData = $this->externalCAProvider->fetchGlobalUserInfo( 'https://meta.miraheze.org/w/api.php', $externalUsernames['mh'] ?? '' );
+			$this->showExternalData( $mhData, $externalUsernames['mh'] ?? $user->getName(), 'Miraheze', 'mca-header-list-mh', $mhManual );
+		}
+
+		if ( $otherManual ) {
+			$this->showOtherManualData( $user, $otherManual );
+		}
+
+		if ( $wmManual || $mhManual || $otherManual ) {
+			$this->getOutput()->addHTML( Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
+				'name' => 'delete_selected',
+				'class' => 'mw-ui-button mw-ui-destructive',
+				'onclick' => "return confirm('" . Xml::escapeJsString( $this->msg( 'mca-manage-confirm-delete' )->text() ) . "');"
+			] ) );
+		}
+
+		$this->getOutput()->addHTML( Html::closeElement( 'form' ) );
 	}
 
 	public function onSubmit( array $formData ) {
@@ -222,6 +229,30 @@ class SpecialManageCA extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg ) );
 	}
 
+	private function showOtherManualData( $user, array $manualWikis ) {
+		$rows = [];
+		foreach ( $manualWikis as $wikiHost ) {
+			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() );
+			if ( $metadata ) {
+				$rows[] = [
+					'wiki' => $wikiHost,
+					'url' => "https://$wikiHost/",
+					'attachedMethod' => 'local',
+					'editCount' => $metadata['editcount'],
+					'attachedTimestamp' => $metadata['registration'],
+					'groups' => $metadata['groups'],
+					'blocked' => $metadata['blocked'],
+					'manual' => true,
+				];
+			}
+		}
+
+		if ( $rows ) {
+			$table = $this->renderTable( $rows, $user->getName() );
+			$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, 'mca-manage-current-wikis' ) );
+		}
+	}
+
 	private function renderTable( array $rows, $username ) {
 		$lang = $this->getLanguage();
 		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
@@ -240,10 +271,12 @@ class SpecialManageCA extends SpecialPage {
 			$wikiId = $row['wiki'];
 			$url = $row['url'] ?? null;
 			$wikiDisplayId = $wikiId;
+			$dbId = $wikiId;
 
 			if ( $url ) {
 				$parsedUrl = parse_url( $url );
 				$wikiDisplayId = $parsedUrl['host'] ?? $wikiId;
+				$dbId = $wikiDisplayId;
 				$userPageUrl = rtrim( $url, '/' ) . '/wiki/User:' . urlencode( $username );
 				$wikiDisplay = Html::element( 'a', [ 'href' => $userPageUrl ], $wikiDisplayId );
 			} else {
@@ -287,7 +320,11 @@ class SpecialManageCA extends SpecialPage {
 			// Checkbox
 			$checkbox = '';
 			if ( $row['manual'] ) {
-				$checkbox = Html::check( 'remove_wikis[]', false, [ 'value' => $wikiId ] );
+				$checkbox = Html::element( 'input', [
+					'type' => 'checkbox',
+					'name' => 'remove_wikis[]',
+					'value' => $dbId
+				] );
 			}
 			$html .= Html::rawElement( 'td', [ 'style' => 'text-align: center;' ], $checkbox );
 
