@@ -51,7 +51,9 @@ class SpecialManageCA extends SpecialPage {
 		$dbw = $this->dbProvider->getPrimaryDatabase();
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
-		if ( !$externalUsernames['wm'] && !$externalUsernames['mh'] ) {
+		$hasLinkedAccounts = (bool)( $externalUsernames['wm'] || $externalUsernames['mh'] );
+
+		if ( !$hasLinkedAccounts ) {
 			$this->getOutput()->addHTML( Html::warningBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
 		}
 
@@ -95,16 +97,29 @@ class SpecialManageCA extends SpecialPage {
 				'options' => [
 					'.wikipedia.org' => '.wikipedia.org',
 					'.wikimedia.org' => '.wikimedia.org',
+					'.wiktionary.org' => '.wiktionary.org',
+					'.wikibooks.org' => '.wikibooks.org',
+					'.wikisource.org' => '.wikisource.org',
+					'.wikiquote.org' => '.wikiquote.org',
+					'.wikinews.org' => '.wikinews.org',
 					'.miraheze.org' => '.miraheze.org',
-					'Other' => 'other',
 				],
 				'required' => true,
 			],
 		];
 
+		if ( !$hasLinkedAccounts ) {
+			foreach ( $formDescriptor as &$field ) {
+				$field['disabled'] = true;
+			}
+		}
+
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 		$htmlForm->setSubmitTextMsg( 'mca-manage-action-add' );
+		if ( !$hasLinkedAccounts ) {
+			$htmlForm->setSubmitAttributes( [ 'disabled' => true ] );
+		}
 
 		$htmlForm->prepareForm();
 		$status = $htmlForm->tryAuthorizedSubmit();
@@ -142,7 +157,7 @@ class SpecialManageCA extends SpecialPage {
 			$this->showOtherManualData( $user, $otherManual );
 		}
 
-		if ( $manualWikis ) {
+		if ( $externalUsernames['wm'] || $externalUsernames['mh'] || $manualWikis ) {
 			$deleteContent = Html::element( 'p', [], $this->msg( 'mca-manage-delete-help' )->text() );
 			$deleteContent .= Html::submitButton( $this->msg( 'mca-manage-delete-selected' )->text(), [
 				'name' => 'delete_selected',
@@ -216,7 +231,7 @@ class SpecialManageCA extends SpecialPage {
 			$rows[] = [
 				'wiki' => $wikiHost,
 				'url' => "https://$wikiHost/",
-				'attachedMethod' => 'local',
+				'attachedMethod' => 'primary',
 				'editCount' => $metadata['editcount'] ?? 0,
 				'attachedTimestamp' => $metadata['registration'] ?? '',
 				'groups' => $metadata['groups'] ?? [],
@@ -237,7 +252,7 @@ class SpecialManageCA extends SpecialPage {
 			$rows[] = [
 				'wiki' => $wikiHost,
 				'url' => "https://$wikiHost/",
-				'attachedMethod' => 'local',
+				'attachedMethod' => 'primary',
 				'editCount' => $metadata['editcount'] ?? 0,
 				'attachedTimestamp' => $metadata['registration'] ?? '',
 				'groups' => $metadata['groups'] ?? [],
@@ -257,7 +272,7 @@ class SpecialManageCA extends SpecialPage {
 		$lang = $this->getLanguage();
 		$html = Html::openElement( 'table', [ 'class' => 'wikitable sortable mw-centralauth-wikislist', 'style' => 'width: 100%;' ] );
 		$html .= Html::openElement( 'thead' ) . Html::openElement( 'tr' );
-		$html .= Html::rawElement( 'th', [], '&nbsp;' ); // Checkbox column first
+		$html .= Html::rawElement( 'th', [ 'class' => 'unsortable' ], '&nbsp;' ); // Checkbox column first
 		foreach ( [ 'localwiki', 'attached-on', 'method' ] as $col ) {
 			$html .= Html::element( 'th', [], $this->msg( "centralauth-admin-list-$col" )->text() );
 		}
@@ -269,7 +284,7 @@ class SpecialManageCA extends SpecialPage {
 
 			// Checkbox
 			$checkbox = '';
-			if ( $row['manual'] && isset( $row['host'] ) ) {
+			if ( isset( $row['host'] ) ) {
 				$checkbox = Html::element( 'input', [
 					'type' => 'checkbox',
 					'name' => 'remove_wikis[]',
