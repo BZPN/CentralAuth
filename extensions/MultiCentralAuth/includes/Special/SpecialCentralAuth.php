@@ -102,7 +102,7 @@ class SpecialCentralAuth extends SpecialPage {
 		$this->getOutput()->addHTML( '<h2>' . $this->msg( 'mca-header-local' )->escaped() . '</h2>' );
 
 		$attachedWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
-		$currentWiki = $this->getConfig()->get( MainConfigNames::DBname );
+		$currentWiki = WikiMap::getCurrentWikiId();
 
 		// Always include current wiki if user is registered here (which they are if we got here)
 		$wikisToShow = array_unique( array_merge( [ $currentWiki ], $attachedWikis ) );
@@ -125,7 +125,7 @@ class SpecialCentralAuth extends SpecialPage {
 					'editCount' => $userData ? (int)$userData->user_editcount : 0,
 					'attachedTimestamp' => $userData ? $userData->user_registration : '',
 					'groups' => $this->userGroupManager->getUserGroups( $user ),
-					'blocked' => (bool)$this->blockManager->getBlock( $user, $this->getAuthority() ),
+					'blocked' => (bool)$this->blockManager->getBlock( $user, null ),
 				];
 			} else {
 				$rows[] = [
