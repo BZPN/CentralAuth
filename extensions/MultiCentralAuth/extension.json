@@ -9,21 +9,17 @@
 	"requires": {
 		"MediaWiki": ">= 1.45.1"
 	},
-	"AvailableRights": [
-		"ca-merge",
-		"ca-manage",
-		"ca-request",
-		"ca-admin"
-	],
 	"GroupPermissions": {
 		"user": {
 			"ca-request": true,
-			"ca-manage": true
+			"ca-manage": true,
+			"ca-request-view": true
 		},
 		"sysop": {
 			"ca-merge": true,
 			"ca-manage": true,
-			"ca-admin": true
+			"ca-admin": true,
+			"ca-request-view": true
 		}
 	},
 	"SpecialPages": {
@@ -175,5 +171,12 @@
 			"tooltip": "echo-category-title-mca-merge-request"
 		}
 	},
+	"AvailableRights": [
+		"ca-merge",
+		"ca-manage",
+		"ca-request",
+		"ca-admin",
+		"ca-request-view"
+	],
 	"manifest_version": 2
 }

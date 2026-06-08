@@ -444,10 +444,15 @@ class SpecialCentralAuth extends SpecialPage {
 		if ( $block ) {
 			$blocker = $block->gb_by_text;
 			$expiry = $block->gb_expiry;
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = $this->msg( 'infiniteblock' )->text();
+			} else {
+				$formattedExpiry = $this->getLanguage()->userTimeAndDate( $expiry, $this->getUser() );
+			}
 			$reason = $block->gb_reason ?? '';
 			$timestamp = $this->getLanguage()->userTimeAndDate( $block->gb_timestamp, $this->getUser() );
 
-			$msg = $this->msg( 'mca-global-block-notice', $blocker, $expiry, $reason, $timestamp )->parse();
+			$msg = $this->msg( 'mca-global-block-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
 			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
 				Html::rawElement( 'div', [], $msg )

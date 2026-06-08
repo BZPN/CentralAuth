@@ -16,6 +16,7 @@
 	"right-ca-manage": "Manage CentralAuth local attachments",
 	"right-ca-request": "Request CentralAuth account merge",
 	"right-ca-admin": "Manage CentralAuth extension settings",
+	"right-ca-request-view": "View CentralAuth merge requests",
 	"action-ca-merge": "merge CentralAuth accounts",
 	"action-ca-manage": "manage CentralAuth local attachments",
 	"action-ca-request": "request CentralAuth account merge",

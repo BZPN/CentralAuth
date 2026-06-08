@@ -185,6 +185,7 @@ class SpecialManageCA extends SpecialPage {
 		// 3. Tables with checkboxes
 		$this->getOutput()->addHTML( Html::openElement( 'form', [ 'method' => 'post', 'action' => $this->getPageTitle()->getLocalURL() ] ) );
 		$this->getOutput()->addHTML( Html::hidden( 'wpEditToken', $this->getUser()->getEditToken() ) );
+		$this->getOutput()->addHTML( Html::hidden( 'target', $user->getName() ) );
 
 		$farms = $this->externalCAProvider->getFarms();
 		$farmManual = [];
