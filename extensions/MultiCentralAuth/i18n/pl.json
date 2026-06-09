@@ -80,6 +80,7 @@
 	"mca-error-invalid-user": "Nieprawidłowa nazwa użytkownika.",
 	"mca-error-user-not-found": "Użytkownik nie został znaleziony.",
 	"mca-manage-error-wiki-not-found": "Wiki $1 nie istnieje lub jest nieosiągalna.",
+	"mca-manage-error-already-attached": "Wiki $1 jest już dołączona do Twojego konta.",
 	"mca-merge-success": "Pomyślnie połączono konta dla użytkownika $1.",
 	"mca-unmerge-success": "Pomyślnie rozłączono konta dla użytkownika $1.",
 	"mca-manage-success": "Zmiany zostały pomyślnie zapisane.",
