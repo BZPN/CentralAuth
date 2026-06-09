@@ -16,6 +16,7 @@ class Hooks {
 		$updater->addExtensionTable( 'mca_farms', __DIR__ . '/../sql/mca_farms.sql' );
 		$updater->addExtensionTable( 'mca_farm_wikis', __DIR__ . '/../sql/mca_farms.sql' );
 		$updater->addExtensionTable( 'mca_external_userids', __DIR__ . '/../sql/mca_external_userids.sql' );
+		$updater->addExtensionTable( 'mca_locks', __DIR__ . '/../sql/mca_locks.sql' );
 	}
 
 	public static function onContributionsToolLinks( $id, $user, &$toolLinks ) {
@@ -95,5 +96,35 @@ class Hooks {
 			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newAnonymous(),
 			'targets' => [ $user ],
 		] );
+	}
+
+	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
+		if ( !$user->isRegistered() ) {
+			return;
+		}
+
+		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
+		$dbr = $dbProvider->getReplicaDatabase();
+
+		$lock = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_locks' )
+			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->fetchRow();
+
+		if ( $lock ) {
+			$expiry = $lock->mcl_expiry;
+			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
+				\MediaWiki\Context\RequestContext::getMain()->getLanguage()->getCode()
+			);
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
+			} else {
+				$formattedExpiry = $lang->userTimeAndDate( $expiry );
+			}
+
+			$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+		}
 	}
 }

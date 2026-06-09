@@ -71,6 +71,7 @@ class SpecialCentralAuth extends SpecialPage {
 		}
 
 		$this->showGlobalBlockInfo( $user );
+		$this->showGlobalLockInfo( $user );
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
 		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId() );
@@ -457,6 +458,35 @@ class SpecialCentralAuth extends SpecialPage {
 
 			$msg = $this->msg( 'mca-global-block-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
 			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
+				Html::rawElement( 'div', [], $msg )
+			) );
+		}
+	}
+
+	private function showGlobalLockInfo( $user ) {
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		$lock = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_locks' )
+			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->fetchRow();
+
+		if ( $lock ) {
+			$performer = $this->userFactory->newFromId( $lock->mcl_by );
+			$blocker = $performer ? $performer->getName() : $lock->mcl_by;
+			$expiry = $lock->mcl_expiry;
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = $this->msg( 'infiniteblock' )->text();
+			} else {
+				$formattedExpiry = $this->getLanguage()->userTimeAndDate( $expiry, $this->getUser() );
+			}
+			$reason = $lock->mcl_reason;
+			$timestamp = $this->getLanguage()->userTimeAndDate( $lock->mcl_timestamp, $this->getUser() );
+
+			$msg = $this->msg( 'mca-global-lock-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-warning' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
 				Html::rawElement( 'div', [], $msg )
 			) );
