@@ -33,8 +33,9 @@
 		} );
 
 		// Farm/Wiki selection logic with OOUI Infusion
-		if ( $( '#mca-farm-select' ).length ) {
-			const farmSelect = OO.ui.infuse( $( '#mca-farm-select' ) );
+		const $farmSelect = $( '#mca-farm-select' );
+		if ( $farmSelect.length ) {
+			const farmSelect = OO.ui.infuse( $farmSelect );
 			const wikiSelect = OO.ui.infuse( $( '#mca-wiki-select' ) );
 			const domainSelect = OO.ui.infuse( $( '#mca-domain-select' ) );
 			const subdomainField = OO.ui.infuse( $( '#mca-subdomain-field' ) );
@@ -45,9 +46,9 @@
 				const farmId = farmSelect.getValue();
 
 				if ( farmId === 'wm' || farmId === 'mh' ) {
-					wikiSelect.$element.closest( '.oo-ui-fieldLayout' ).hide();
-					subdomainField.$element.closest( '.oo-ui-fieldLayout' ).show();
-					domainSelect.$element.closest( '.oo-ui-fieldLayout' ).show();
+					wikiSelect.$element.closest( '.oo-ui-fieldLayout' ).addClass( 'oo-ui-element-hidden' );
+					subdomainField.$element.closest( '.oo-ui-fieldLayout' ).removeClass( 'oo-ui-element-hidden' );
+					domainSelect.$element.closest( '.oo-ui-fieldLayout' ).removeClass( 'oo-ui-element-hidden' );
 
 					const domains = [];
 					if ( farmId === 'wm' ) {
@@ -61,9 +62,9 @@
 					}
 					domainSelect.setOptions( domains );
 				} else {
-					wikiSelect.$element.closest( '.oo-ui-fieldLayout' ).show();
-					subdomainField.$element.closest( '.oo-ui-fieldLayout' ).hide();
-					domainSelect.$element.closest( '.oo-ui-fieldLayout' ).hide();
+					wikiSelect.$element.closest( '.oo-ui-fieldLayout' ).removeClass( 'oo-ui-element-hidden' );
+					subdomainField.$element.closest( '.oo-ui-fieldLayout' ).addClass( 'oo-ui-element-hidden' );
+					domainSelect.$element.closest( '.oo-ui-fieldLayout' ).addClass( 'oo-ui-element-hidden' );
 
 					const wikis = farmWikis[ farmId ] || {};
 					const options = [];
@@ -75,7 +76,8 @@
 			};
 
 			farmSelect.on( 'change', updateVisibility );
-			updateVisibility();
+			// Wait for OOUI to be ready
+			setTimeout( updateVisibility, 0 );
 		}
 	} );
 }() );
