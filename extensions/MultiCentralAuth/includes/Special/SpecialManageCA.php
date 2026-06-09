@@ -81,7 +81,7 @@ class SpecialManageCA extends SpecialPage {
 		}
 
 		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
-		$hasLinkedAccounts = (bool)( $externalUsernames['wm'] || $externalUsernames['mh'] );
+		$hasLinkedAccounts = (bool)array_filter( $externalUsernames );
 
 		if ( !$hasLinkedAccounts ) {
 			$this->getOutput()->addHTML( Html::warningBox( $this->msg( 'mca-manage-need-link' )->parse() ) );
@@ -205,6 +205,11 @@ class SpecialManageCA extends SpecialPage {
 			}
 		}
 
+		$allFarmWikis = [];
+		foreach ( $farmWikis as $wikis ) {
+			$allFarmWikis += $wikis;
+		}
+
 		$formDescriptor = [
 			'farm' => [
 				'type' => 'select',
@@ -213,19 +218,22 @@ class SpecialManageCA extends SpecialPage {
 				'options' => $farmOptions,
 				'default' => 'wm',
 				'id' => 'mca-farm-select',
+				'infusable' => true,
 			],
 			'dynamic_wiki' => [
 				'type' => 'select',
 				'name' => 'dynamic_wiki',
 				'label-message' => 'mca-manage-wiki-selection',
-				'options' => [],
+				'options' => $allFarmWikis,
 				'id' => 'mca-wiki-select',
+				'infusable' => true,
 			],
 			'subdomain' => [
 				'type' => 'text',
 				'name' => 'subdomain',
 				'label-message' => 'mca-manage-subdomain',
 				'id' => 'mca-subdomain-field',
+				'infusable' => true,
 			],
 			'domain' => [
 				'type' => 'select',
@@ -242,6 +250,7 @@ class SpecialManageCA extends SpecialPage {
 					'.miraheze.org' => '.miraheze.org',
 				],
 				'id' => 'mca-domain-select',
+				'infusable' => true,
 			],
 		];
 
