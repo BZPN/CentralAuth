@@ -138,21 +138,44 @@ class SpecialManageCA extends SpecialPage {
 					$logEntry->publish( $logId );
 				}
 
-				// Auto-unmerge logic: if all wikis of a farm are removed, remove the external ID
+				// Auto-unmerge logic: if all wikis of a farm are removed (manually OR by suppression), remove the external ID
 				$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
-				foreach ( $wikisByFarm as $farmId => $wikis ) {
+				$allManual = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
+				$allSuppressed = $this->externalCAProvider->getSuppressedWikis( $user->getId(), true );
+
+				foreach ( $wikisByFarm as $farmId => $removedWikis ) {
 					if ( isset( $externalUsernames[$farmId] ) && $externalUsernames[$farmId] ) {
-						// Check if any wikis of this farm still exist for this user
-						$remainingWikis = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
-						$farmStillHasWikis = false;
-						foreach ( $remainingWikis as $remWiki ) {
-							if ( $this->externalCAProvider->categorizeWiki( $remWiki ) === $farmId ) {
-								$farmStillHasWikis = true;
+						$farmStillVisible = false;
+
+						// 1. Check if any manual attachments remain for this farm
+						foreach ( $allManual as $wiki ) {
+							if ( $this->externalCAProvider->categorizeWiki( $wiki ) === $farmId ) {
+								$farmStillVisible = true;
 								break;
 							}
 						}
 
-						if ( !$farmStillHasWikis ) {
+						// 2. Check if any merged accounts remain that are NOT suppressed
+						if ( !$farmStillVisible ) {
+							$farms = $this->externalCAProvider->getFarms();
+							$currentFarm = null;
+							foreach ( $farms as $f ) if ( $f['id'] === $farmId ) $currentFarm = $f;
+
+							if ( $currentFarm && $currentFarm['is_centralauth'] && $currentFarm['api_url'] ) {
+								$data = $this->externalCAProvider->fetchGlobalUserInfo( $currentFarm['api_url'], $externalUsernames[$farmId] );
+								$merged = $data['merged'] ?? [];
+								foreach ( $merged as $m ) {
+									$parsed = parse_url( $m['url'] );
+									$host = isset( $parsed['host'] ) ? strtolower( $parsed['host'] ) : null;
+									if ( $host && !in_array( $host, $allSuppressed ) ) {
+										$farmStillVisible = true;
+										break;
+									}
+								}
+							}
+						}
+
+						if ( !$farmStillVisible ) {
 							$dbw->delete( 'mca_external_userids', [ 'meu_user_id' => $user->getId(), 'meu_farm_id' => $farmId ], __METHOD__ );
 						}
 					}
@@ -173,8 +196,13 @@ class SpecialManageCA extends SpecialPage {
 
 		// 2. Add form
 		$farmOptions = [];
+		// Ensure Wikimedia and Miraheze are first and have correct labels
+		$farmOptions['Wikimedia'] = 'wm';
+		$farmOptions['Miraheze'] = 'mh';
 		foreach ( $farms as $farm ) {
-			$farmOptions[$farm['name']] = $farm['id'];
+			if ( $farm['id'] !== 'wm' && $farm['id'] !== 'mh' ) {
+				$farmOptions[$farm['name']] = $farm['id'];
+			}
 		}
 
 		$formDescriptor = [
@@ -191,7 +219,6 @@ class SpecialManageCA extends SpecialPage {
 				'name' => 'dynamic_wiki',
 				'label-message' => 'mca-manage-wiki-selection',
 				'options' => [],
-				'cssclass' => 'mca-dynamic-wiki-field',
 				'id' => 'mca-wiki-select',
 			],
 			'subdomain' => [
