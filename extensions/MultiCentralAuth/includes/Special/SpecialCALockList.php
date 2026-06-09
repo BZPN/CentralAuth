@@ -126,11 +126,32 @@ class SpecialCALockList extends SpecialPage {
 
 	private function showSearchForm() {
 		$formDescriptor = [
-			'Target' => [
+			'wpTarget' => [
 				'type' => 'user',
 				'name' => 'wpTarget',
 				'label-message' => 'mca-target-label',
 				'default' => $this->getRequest()->getText( 'wpTarget' ),
+			],
+			'sort' => [
+				'type' => 'select',
+				'name' => 'sort',
+				'label-message' => 'mca-lock-list-sort',
+				'options' => [
+					$this->msg( 'mca-lock-list-timestamp' )->text() => 'timestamp',
+					$this->msg( 'mca-lock-list-expiry' )->text() => 'expiry',
+					$this->msg( 'mca-lock-list-id' )->text() => 'id',
+				],
+				'default' => $this->getRequest()->getText( 'sort', 'timestamp' ),
+			],
+			'order' => [
+				'type' => 'select',
+				'name' => 'order',
+				'label-message' => 'mca-lock-list-order',
+				'options' => [
+					'Descending' => 'DESC',
+					'Ascending' => 'ASC',
+				],
+				'default' => $this->getRequest()->getText( 'order', 'DESC' ),
 			],
 		];
 
@@ -162,6 +183,7 @@ class SpecialCALockList extends SpecialPage {
 
 		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
 		$html .= Html::openElement( 'ul' );
+		$html .= Html::rawElement( 'li', [], '[[USERNAME]]' ); // Placeholder, actual username link handled by message or logic
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-id' )->text() . ': ' . $row->mcl_id );
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-user' )->text() . ': ' . ( $user ? $user->getName() : $row->mcl_user_id ) );
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-reason' )->text() . ': ' . htmlspecialchars( $row->mcl_reason ) );
@@ -183,7 +205,11 @@ class SpecialCALockList extends SpecialPage {
 		$html .= Html::closeElement( 'ul' );
 		$html .= Html::closeElement( 'div' );
 
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $html, 'mca-request-details-title', 'mca-header-type-info' ) );
+		// Fix placeholder
+		$username = $user ? $user->getName() : (string)$row->mcl_user_id;
+		$html = str_replace( '[[USERNAME]]', $this->msg( 'mca-username', htmlspecialchars( $username ) )->parse(), $html );
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $html, [ 'mca-lock-details-title', $id ], 'mca-header-type-info' ) );
 
 		$unlockUrl = SpecialPage::getTitleFor( 'UnlockCAAccount', $user ? $user->getName() : '' )->getFullURL();
 		$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'style' => 'margin-top: 1em;' ],

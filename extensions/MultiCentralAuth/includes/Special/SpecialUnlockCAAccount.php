@@ -89,7 +89,7 @@ class SpecialUnlockCAAccount extends SpecialPage {
 		// Log action
 		$targetUser = $this->userFactory->newFromName( $targetName );
 		if ( $targetUser ) {
-			$logEntry = new \ManualLogEntry( 'mca-log', 'unlock' );
+			$logEntry = new \ManualLogEntry( 'mca-lock-log', 'unlock' );
 			$logEntry->setPerformer( $this->getUser() );
 			$logEntry->setTarget( $targetUser->getUserPage() );
 			$logEntry->setComment( $reason );

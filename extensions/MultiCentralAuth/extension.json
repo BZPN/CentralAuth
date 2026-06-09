@@ -150,28 +150,32 @@
 		"includes/ServiceWiring.php"
 	],
 	"LogTypes": [
-		"mca-log"
+		"mca-log",
+		"mca-lock-log"
 	],
 	"LogNames": {
-		"mca-log": "mca-log-name"
+		"mca-log": "mca-log-name",
+		"mca-lock-log": "mca-lock-log-name"
 	},
 	"LogHeaders": {
-		"mca-log": "mca-log-header"
+		"mca-log": "mca-log-header",
+		"mca-lock-log": "mca-lock-log-header"
 	},
 	"LogActionsHandlers": {
-		"mca-log/merge": "LogFormatter",
-		"mca-log/unmerge": "LogFormatter",
-		"mca-log/manage-add": "LogFormatter",
-		"mca-log/manage-remove": "LogFormatter",
-		"mca-log/lock": "LogFormatter",
-		"mca-log/unlock": "LogFormatter"
+		"mca-log/merge": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter",
+		"mca-log/unmerge": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter",
+		"mca-log/manage-add": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter",
+		"mca-log/manage-remove": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter",
+		"mca-lock-log/lock": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter",
+		"mca-lock-log/unlock": "MediaWiki\\Extension\\MultiCentralAuth\\MCALogFormatter"
 	},
 	"Hooks": {
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onLoadExtensionSchemaUpdates",
 		"ContributionsToolLinks": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onContributionsToolLinks",
 		"MCAMergeRequestSubmitted": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestSubmitted",
 		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
-		"CheckCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onCheckCanLogin"
+		"CheckCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onCheckCanLogin",
+		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput"
 	},
 	"EchoNotifications": {
 		"mca-merge-request-submitted": {
