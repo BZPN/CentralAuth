@@ -37,6 +37,8 @@ class SpecialLockCAAccount extends SpecialPage {
 		$this->getOutput()->addModuleStyles( [
 			'oojs-ui-core.styles',
 			'oojs-ui-widgets.styles',
+			'oojs-ui.styles.icons-editing-styling',
+			'oojs-ui.styles.icons-moderation',
 			'mediawiki.widgets.styles',
 			'mediawiki.widgets.DateInputWidget.styles',
 			'ext.multicentralauth.styles'
@@ -62,6 +64,7 @@ class SpecialLockCAAccount extends SpecialPage {
 				'type' => 'expiry',
 				'name' => 'expiry',
 				'label-message' => 'mca-lock-expiry',
+				'default' => 'infinite',
 				'options' => [
 					$this->msg( 'mca-lock-expiry-1hour' )->text() => '1 hour',
 					$this->msg( 'mca-lock-expiry-2hours' )->text() => '2 hours',
@@ -82,6 +85,7 @@ class SpecialLockCAAccount extends SpecialPage {
 				'label-message' => 'mca-lock-reason',
 				'options-message' => 'mca-lock-reason-dropdown',
 				'cssclass' => 'mca-mobile-full-width',
+				'maxlength' => 255,
 			],
 			'unmerge' => [
 				'type' => 'check',
@@ -119,12 +123,14 @@ class SpecialLockCAAccount extends SpecialPage {
 		if ( is_array( $reason ) ) {
 			$selected = $reason[0] ?? '';
 			$other = $reason[1] ?? '';
-			if ( $selected === 'other' ) {
-				$reason = $other;
-			} elseif ( $selected === '' ) {
+			if ( $selected === 'other' || $selected === '' ) {
 				$reason = $other;
 			} else {
-				$reason = $selected . ( $other ? ': ' . $other : '' );
+				if ( $other !== '' && $other !== $selected ) {
+					$reason = $selected . ': ' . $other;
+				} else {
+					$reason = $selected;
+				}
 			}
 		}
 

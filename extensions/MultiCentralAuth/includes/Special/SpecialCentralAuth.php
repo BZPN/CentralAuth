@@ -475,7 +475,14 @@ class SpecialCentralAuth extends SpecialPage {
 
 		if ( $lock ) {
 			$performer = $this->userFactory->newFromId( $lock->mcl_by );
-			$blocker = $performer ? $performer->getName() : $lock->mcl_by;
+			if ( $performer && $performer->isRegistered() ) {
+				$blockerLink = Html::element( 'a', [
+					'href' => SpecialPage::getTitleFor( 'CentralAuth', $performer->getName() )->getFullURL(),
+				], $performer->getName() );
+			} else {
+				$blockerLink = $lock->mcl_by;
+			}
+
 			$expiry = $lock->mcl_expiry;
 			if ( $expiry === 'infinity' ) {
 				$formattedExpiry = $this->msg( 'infiniteblock' )->text();
@@ -485,9 +492,14 @@ class SpecialCentralAuth extends SpecialPage {
 			$reason = $lock->mcl_reason;
 			$timestamp = $this->getLanguage()->userTimeAndDate( $lock->mcl_timestamp, $this->getUser() );
 
-			$msg = $this->msg( 'mca-global-lock-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
-			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-warning' ],
-				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
+			$msg = $this->msg( 'mca-global-lock-notice' )
+				->rawParams( $blockerLink )
+				->params( $formattedExpiry, $reason, $timestamp )
+				->parse();
+
+			$this->getOutput()->addModuleStyles( 'oojs-ui.styles.icons-moderation' );
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-warning mca-global-lock-notice-box' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-lock' ] ) .
 				Html::rawElement( 'div', [], $msg )
 			) );
 		}
