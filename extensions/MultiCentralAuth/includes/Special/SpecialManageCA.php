@@ -172,7 +172,7 @@ class SpecialManageCA extends SpecialPage {
 		) );
 
 		// 2. Add form
-		$farmOptions = [ 'Manual entry' => 'manual' ];
+		$farmOptions = [];
 		foreach ( $farms as $farm ) {
 			$farmOptions[$farm['name']] = $farm['id'];
 		}
@@ -183,7 +183,7 @@ class SpecialManageCA extends SpecialPage {
 				'name' => 'farm',
 				'label-message' => 'mca-manage-farm',
 				'options' => $farmOptions,
-				'default' => 'manual',
+				'default' => 'wm',
 				'id' => 'mca-farm-select',
 			],
 			'dynamic_wiki' => [
@@ -213,6 +213,7 @@ class SpecialManageCA extends SpecialPage {
 					'.wikinews.org' => '.wikinews.org',
 					'.miraheze.org' => '.miraheze.org',
 				],
+				'id' => 'mca-domain-select',
 			],
 		];
 
@@ -302,12 +303,12 @@ class SpecialManageCA extends SpecialPage {
 	public function onSubmit( array $formData ) {
 		$farm = $formData['farm'];
 		$comment = $formData['comment'];
-		if ( $farm === 'manual' ) {
+		if ( $farm === 'wm' || $farm === 'mh' ) {
 			$subdomain = $formData['subdomain'];
 			$domain = $formData['domain'];
 			$hostname = strtolower( $subdomain . $domain );
 		} else {
-			$hostname = $formData['dynamic_wiki'] ?: $formData['subdomain']; // Fallback to subdomain if dynamic selection was empty
+			$hostname = $formData['dynamic_wiki'] ?: $formData['subdomain'];
 		}
 
 		if ( !$hostname ) {
