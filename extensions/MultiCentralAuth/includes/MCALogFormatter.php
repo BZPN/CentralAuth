@@ -15,8 +15,8 @@ class MCALogFormatter extends LogFormatter {
 		$target = $this->entry->getTarget();
 		if ( $target->getNamespace() === NS_USER ) {
 			return Html::element( 'a', [
-				'href' => $target->getFullURL(),
-				'title' => $target->getPrefixedText(),
+				'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $target->getText() )->getFullURL(),
+				'title' => $target->getText(),
 			], $target->getText() );
 		}
 		return parent::formatTarget();

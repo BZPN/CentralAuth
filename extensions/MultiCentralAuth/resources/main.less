@@ -108,6 +108,11 @@ input[name="delete_selected"] {
 	}
 }
 
+// Fix for possible "NaN" artifact in some MediaWiki versions/layouts
+.oo-ui-fieldLayout-messages:empty {
+    display: none !important;
+}
+
 .merge-method-help {
     cursor: help;
     color: #72777d;

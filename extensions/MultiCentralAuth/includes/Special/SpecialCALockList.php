@@ -179,7 +179,7 @@ class SpecialCALockList extends SpecialPage {
 		$user = $this->userFactory->newFromId( $row->mcl_user_id );
 		$performer = $this->userFactory->newFromId( $row->mcl_by );
 
-		$this->getOutput()->setPageTitle( $this->msg( 'mca-lock-details-title', $id ) );
+		$this->getOutput()->setPageTitle( $this->msg( 'mca-lock-details-title', $id )->text() );
 
 		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
 		$html .= Html::openElement( 'ul' );

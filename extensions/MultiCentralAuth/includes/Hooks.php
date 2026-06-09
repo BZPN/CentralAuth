@@ -115,16 +115,18 @@ class Hooks {
 
 		if ( $lock ) {
 			$expiry = $lock->mcl_expiry;
+			$context = \MediaWiki\Context\RequestContext::getMain();
 			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
-				\MediaWiki\Context\RequestContext::getMain()->getLanguage()->getCode()
+				$context->getLanguage()->getCode()
 			);
 			if ( $expiry === 'infinity' ) {
 				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
 			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry );
+				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
 			}
 
 			$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			return false;
 		}
 	}
 
@@ -149,20 +151,32 @@ class Hooks {
 
 		if ( $lock ) {
 			$performer = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromId( $lock->mcl_by );
-			$blocker = $performer ? $performer->getName() : $lock->mcl_by;
+			if ( $performer && $performer->isRegistered() ) {
+				$blockerLink = Html::element( 'a', [
+					'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $performer->getName() )->getFullURL(),
+				], $performer->getName() );
+			} else {
+				$blockerLink = $lock->mcl_by;
+			}
+
 			$expiry = $lock->mcl_expiry;
 			$lang = $out->getLanguage();
 			if ( $expiry === 'infinity' ) {
 				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
 			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry );
+				$formattedExpiry = $lang->userTimeAndDate( $expiry, $out->getUser() );
 			}
 			$reason = $lock->mcl_reason;
-			$timestamp = $lang->userTimeAndDate( $lock->mcl_timestamp );
+			$timestamp = $lang->userTimeAndDate( $lock->mcl_timestamp, $out->getUser() );
 
-			$msg = wfMessage( 'mca-global-lock-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
-			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],
-				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
+			$msg = wfMessage( 'mca-global-lock-notice' )
+				->rawParams( $blockerLink )
+				->params( $formattedExpiry, $reason, $timestamp )
+				->parse();
+
+			$out->addModuleStyles( 'oojs-ui.styles.icons-moderation' );
+			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error mca-global-lock-notice-box' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-lock' ] ) .
 				Html::rawElement( 'div', [], $msg )
 			) );
 		}
