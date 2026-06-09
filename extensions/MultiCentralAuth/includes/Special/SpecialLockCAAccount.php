@@ -98,7 +98,14 @@ class SpecialLockCAAccount extends SpecialPage {
 		$reason = $formData['reason'];
 
 		if ( is_array( $reason ) ) {
-			$reason = $reason[0] ?? '';
+			// selectandother returns [ selected, other ]
+			$selected = $reason[0] ?? '';
+			$other = $reason[1] ?? '';
+			if ( $selected === 'other' ) {
+				$reason = $other;
+			} else {
+				$reason = $selected . ( $other ? ': ' . $other : '' );
+			}
 		}
 
 		$unmerge = $formData['unmerge'];
@@ -147,7 +154,7 @@ class SpecialLockCAAccount extends SpecialPage {
 		}
 
 		// Log action
-		$logEntry = new \ManualLogEntry( 'mca-log', 'lock' );
+		$logEntry = new \ManualLogEntry( 'mca-lock-log', 'lock' );
 		$logEntry->setPerformer( $this->getUser() );
 		$logEntry->setTarget( $user->getUserPage() );
 		$logEntry->setComment( $reason );

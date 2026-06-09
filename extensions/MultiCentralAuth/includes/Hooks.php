@@ -127,4 +127,44 @@ class Hooks {
 			$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
 		}
 	}
+
+	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $out ) {
+		// $user can be a Title or a User object depending on version
+		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
+		$targetUser = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromName( $targetName );
+
+		if ( !$targetUser || !$targetUser->isRegistered() ) {
+			return;
+		}
+
+		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
+		$dbr = $dbProvider->getReplicaDatabase();
+
+		$lock = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_locks' )
+			->where( [ 'mcl_user_id' => $targetUser->getId() ] )
+			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->fetchRow();
+
+		if ( $lock ) {
+			$performer = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromId( $lock->mcl_by );
+			$blocker = $performer ? $performer->getName() : $lock->mcl_by;
+			$expiry = $lock->mcl_expiry;
+			$lang = $out->getLanguage();
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
+			} else {
+				$formattedExpiry = $lang->userTimeAndDate( $expiry );
+			}
+			$reason = $lock->mcl_reason;
+			$timestamp = $lang->userTimeAndDate( $lock->mcl_timestamp );
+
+			$msg = wfMessage( 'mca-global-lock-notice', $blocker, $formattedExpiry, $reason, $timestamp )->parse();
+			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon' ] ) .
+				Html::rawElement( 'div', [], $msg )
+			) );
+		}
+	}
 }
