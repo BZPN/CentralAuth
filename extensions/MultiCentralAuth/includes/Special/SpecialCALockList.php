@@ -183,7 +183,7 @@ class SpecialCALockList extends SpecialPage {
 
 		$html = Html::openElement( 'div', [ 'class' => 'mca-info-box' ] );
 		$html .= Html::openElement( 'ul' );
-		$html .= Html::rawElement( 'li', [], '[[USERNAME]]' ); // Placeholder, actual username link handled by message or logic
+		$html .= Html::rawElement( 'li', [], '[[USERNAME]]' );
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-id' )->text() . ': ' . $row->mcl_id );
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-user' )->text() . ': ' . ( $user ? $user->getName() : $row->mcl_user_id ) );
 		$html .= Html::rawElement( 'li', [], $this->msg( 'mca-lock-list-reason' )->text() . ': ' . htmlspecialchars( $row->mcl_reason ) );
@@ -205,7 +205,6 @@ class SpecialCALockList extends SpecialPage {
 		$html .= Html::closeElement( 'ul' );
 		$html .= Html::closeElement( 'div' );
 
-		// Fix placeholder
 		$username = $user ? $user->getName() : (string)$row->mcl_user_id;
 		$html = str_replace( '[[USERNAME]]', $this->msg( 'mca-username', htmlspecialchars( $username ) )->parse(), $html );
 

@@ -86,6 +86,8 @@
 	"mca-unmerge-farm": "Farms to unmerge:",
 	"mca-error-invalid-user": "Invalid username.",
 	"mca-error-user-not-found": "User not found.",
+	"mca-lock-error-self": "You cannot lock your own account.",
+	"mca-lock-already-locked": "This user is already locked.",
 	"mca-manage-error-wiki-not-found": "The wiki $1 does not exist or is not reachable.",
 	"mca-manage-error-already-attached": "The wiki $1 is already attached to your account.",
 	"mca-manage-error-user-not-registered": "User $1 is not registered on $2.",

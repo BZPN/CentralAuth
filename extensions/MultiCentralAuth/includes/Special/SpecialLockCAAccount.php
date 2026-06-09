@@ -59,7 +59,18 @@ class SpecialLockCAAccount extends SpecialPage {
 				'type' => 'expiry',
 				'name' => 'expiry',
 				'label-message' => 'mca-lock-expiry',
-				'options-message' => 'mca-lock-expiry-options',
+				'options' => [
+					$this->msg( '1 hour' )->text() => '1 hour',
+					$this->msg( '2 hours' )->text() => '2 hours',
+					$this->msg( '1 day' )->text() => '1 day',
+					$this->msg( '3 days' )->text() => '3 days',
+					$this->msg( '7 days' )->text() => '7 days',
+					$this->msg( '1 month' )->text() => '1 month',
+					$this->msg( '3 months' )->text() => '3 months',
+					$this->msg( '1 year' )->text() => '1 year',
+					$this->msg( '2 years' )->text() => '2 years',
+					$this->msg( 'infiniteblock' )->text() => 'infinite',
+				],
 				'required' => true,
 			],
 			'reason' => [
@@ -89,7 +100,13 @@ class SpecialLockCAAccount extends SpecialPage {
 		$htmlForm->setSubmitDestructive( true );
 		$htmlForm->prepareForm();
 
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'lockcaaccount', 'mca-header-type-view' ) );
+		$status = $htmlForm->tryAuthorizedSubmit();
+		if ( $status === true || ( $status instanceof \StatusValue && $status->isGood() ) ) {
+			// Redirection handled in onSubmit
+			return;
+		}
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'lockcaaccount', 'mca-header-type-view' ) );
 	}
 
 	public function onSubmit( array $formData ) {
@@ -98,7 +115,6 @@ class SpecialLockCAAccount extends SpecialPage {
 		$reason = $formData['reason'];
 
 		if ( is_array( $reason ) ) {
-			// selectandother returns [ selected, other ]
 			$selected = $reason[0] ?? '';
 			$other = $reason[1] ?? '';
 			if ( $selected === 'other' ) {
@@ -113,7 +129,11 @@ class SpecialLockCAAccount extends SpecialPage {
 
 		$user = $this->userFactory->newFromName( $targetName );
 		if ( !$user || !$user->isRegistered() ) {
-			return [ 'mca-error-user-not-found' ];
+			return \Status::newFatal( 'mca-error-user-not-found' );
+		}
+
+		if ( $user->getId() === $this->getUser()->getId() ) {
+			return \Status::newFatal( 'mca-lock-error-self' );
 		}
 
 		$dbw = $this->dbProvider->getPrimaryDatabase();
@@ -127,7 +147,7 @@ class SpecialLockCAAccount extends SpecialPage {
 			->fetchField();
 
 		if ( $exists ) {
-			$dbw->delete( 'mca_locks', [ 'mcl_user_id' => $user->getId() ], __METHOD__ );
+			return \Status::newFatal( 'mca-lock-already-locked' );
 		}
 
 		$dbw->insert(
@@ -165,6 +185,8 @@ class SpecialLockCAAccount extends SpecialPage {
 		$logEntry->publish( $logId );
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-lock-success', $targetName )->parse() ) );
+		// Redirect to same page to show success box and clear form
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $targetName ] ) );
 		return true;
 	}
 

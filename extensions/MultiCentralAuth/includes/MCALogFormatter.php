@@ -2,31 +2,10 @@
 
 namespace MediaWiki\Extension\MultiCentralAuth;
 
-use MediaWiki\Linter\LogFormatter as LinterLogFormatter;
-use MediaWiki\Log\LogFormatter;
+use MediaWiki\Logging\LogFormatter;
 use MediaWiki\Html\Html;
 
 class MCALogFormatter extends LogFormatter {
-
-	/**
-	 * @return array
-	 */
-	protected function getMessageParameters() {
-		$params = parent::getMessageParameters();
-
-		// $params[2] is the target user
-		// We want to format it as a simple username link without "User:" prefix if possible,
-		// but standard LogFormatter uses $3 for formatted target.
-
-		return $params;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getPreloadTitles() {
-		return parent::getPreloadTitles();
-	}
 
 	/**
 	 * Custom formatting for the target
