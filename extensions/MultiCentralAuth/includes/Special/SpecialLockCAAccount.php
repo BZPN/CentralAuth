@@ -10,8 +10,6 @@ use MediaWiki\User\UserNameUtils;
 use MediaWiki\User\UserFactory;
 use Wikimedia\Rdbms\IConnectionProvider;
 use MediaWiki\Html\Html;
-use MediaWiki\Utils\MWTimestamp;
-use MediaWiki\MainConfigNames;
 
 class SpecialLockCAAccount extends SpecialPage {
 
@@ -40,12 +38,17 @@ class SpecialLockCAAccount extends SpecialPage {
 			'oojs-ui-core.styles',
 			'oojs-ui-widgets.styles',
 			'mediawiki.widgets.styles',
+			'mediawiki.widgets.DateInputWidget.styles',
 			'ext.multicentralauth.styles'
 		] );
 
 		$target = $this->getRequest()->getText( 'target', $subpage );
 
 		$this->getOutput()->addHTML( Html::element( 'p', [], $this->msg( 'mca-lock-intro' )->text() ) );
+
+		if ( $this->getRequest()->getVal( 'success' ) ) {
+			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-lock-success', $this->getRequest()->getVal( 'success' ) )->parse() ) );
+		}
 
 		$formDescriptor = [
 			'target' => [
@@ -60,15 +63,15 @@ class SpecialLockCAAccount extends SpecialPage {
 				'name' => 'expiry',
 				'label-message' => 'mca-lock-expiry',
 				'options' => [
-					$this->msg( '1 hour' )->text() => '1 hour',
-					$this->msg( '2 hours' )->text() => '2 hours',
-					$this->msg( '1 day' )->text() => '1 day',
-					$this->msg( '3 days' )->text() => '3 days',
-					$this->msg( '7 days' )->text() => '7 days',
-					$this->msg( '1 month' )->text() => '1 month',
-					$this->msg( '3 months' )->text() => '3 months',
-					$this->msg( '1 year' )->text() => '1 year',
-					$this->msg( '2 years' )->text() => '2 years',
+					$this->msg( 'mca-lock-expiry-1hour' )->text() => '1 hour',
+					$this->msg( 'mca-lock-expiry-2hours' )->text() => '2 hours',
+					$this->msg( 'mca-lock-expiry-1day' )->text() => '1 day',
+					$this->msg( 'mca-lock-expiry-3days' )->text() => '3 days',
+					$this->msg( 'mca-lock-expiry-1week' )->text() => '1 week',
+					$this->msg( 'mca-lock-expiry-1month' )->text() => '1 month',
+					$this->msg( 'mca-lock-expiry-3months' )->text() => '3 months',
+					$this->msg( 'mca-lock-expiry-1year' )->text() => '1 year',
+					$this->msg( 'mca-lock-expiry-2years' )->text() => '2 years',
 					$this->msg( 'infiniteblock' )->text() => 'infinite',
 				],
 				'required' => true,
@@ -102,7 +105,6 @@ class SpecialLockCAAccount extends SpecialPage {
 
 		$status = $htmlForm->tryAuthorizedSubmit();
 		if ( $status === true || ( $status instanceof \StatusValue && $status->isGood() ) ) {
-			// Redirection handled in onSubmit
 			return;
 		}
 
@@ -119,9 +121,15 @@ class SpecialLockCAAccount extends SpecialPage {
 			$other = $reason[1] ?? '';
 			if ( $selected === 'other' ) {
 				$reason = $other;
+			} elseif ( $selected === '' ) {
+				$reason = $other;
 			} else {
 				$reason = $selected . ( $other ? ': ' . $other : '' );
 			}
+		}
+
+		if ( !$reason ) {
+			$reason = 'No reason provided';
 		}
 
 		$unmerge = $formData['unmerge'];
@@ -150,12 +158,29 @@ class SpecialLockCAAccount extends SpecialPage {
 			return \Status::newFatal( 'mca-lock-already-locked' );
 		}
 
+		// Parse expiry
+		if ( $expiry === 'infinite' || $expiry === 'indefinite' || $expiry === 'infinity' ) {
+			$expiryMW = 'infinity';
+		} else {
+			$ts = strtotime( $expiry );
+			if ( !$ts ) {
+				// Try parsing as MW timestamp if it's from the date picker
+				try {
+					$expiryMW = $dbw->timestamp( $expiry );
+				} catch ( \Exception $e ) {
+					return \Status::newFatal( 'mca-lock-error-invalid-expiry' );
+				}
+			} else {
+				$expiryMW = $dbw->timestamp( $ts );
+			}
+		}
+
 		$dbw->insert(
 			'mca_locks',
 			[
 				'mcl_user_id' => $user->getId(),
 				'mcl_reason' => $reason,
-				'mcl_expiry' => $dbw->encodeExpiry( $expiry ),
+				'mcl_expiry' => $expiryMW,
 				'mcl_by' => $this->getUser()->getId(),
 				'mcl_timestamp' => $dbw->timestamp(),
 			],
@@ -184,9 +209,7 @@ class SpecialLockCAAccount extends SpecialPage {
 		$logId = $logEntry->insert();
 		$logEntry->publish( $logId );
 
-		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-lock-success', $targetName )->parse() ) );
-		// Redirect to same page to show success box and clear form
-		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $targetName ] ) );
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'success' => $targetName ] ) );
 		return true;
 	}
 
