@@ -80,13 +80,17 @@ class Hooks {
 			return;
 		}
 
+		$gender = \MediaWiki\MediaWikiServices::getInstance()
+			->getUserOptionsLookup()
+			->getOption( $user, 'gender' );
+
 		\EchoEvent::create( [
 			'type' => 'mca-merge-request-resolved',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 			'extra' => [
 				'request-id' => $requestId,
 				'status' => $status,
-				'gender' => $user->getOption( 'gender' ),
+				'gender' => $gender,
 			],
 			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newAnonymous(),
 			'targets' => [ $user ],

@@ -143,18 +143,30 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 		$user = $this->userFactory->newFromId( $row->mmr_user_id );
 		$extData = json_decode( $row->mmr_external_data, true ) ?: [];
 
+		$userLink = $user ? Html::element( 'a', [ 'href' => $user->getUserPage()->getFullURL() ], $user->getName() ) : 'Unknown';
+		$farmSelection = $row->mmr_farm;
+		if ( $farmSelection === 'wm' ) $farmSelection = 'Wikimedia';
+		elseif ( $farmSelection === 'mh' ) $farmSelection = 'Miraheze';
+		elseif ( $farmSelection === 'both' ) $farmSelection = 'Both (Wikimedia and Miraheze)';
+
 		$fields = [
 			'Request ID' => $row->mmr_id,
-			'User' => $user ? $user->getName() : 'Unknown',
-			'Farm Selection' => $row->mmr_farm,
-			'Status' => $row->mmr_status,
+			'User' => $userLink,
+			'Farm Selection' => $farmSelection,
+			'Status' => ucfirst( $row->mmr_status ),
 			'Comment' => $row->mmr_comment,
 		];
 
 		foreach ( $extData as $farmId => $data ) {
-			$farmName = $farmId === 'wm' ? 'Wikimedia' : ( $farmId === 'mh' ? 'Miraheze' : ucfirst( $farmId ) );
+			$farmName = $farmId === 'wm' ? 'Wikimedia' : 'Miraheze';
 			$fields["$farmName username"] = $data['user'] ?? '';
-			$fields["$farmName confirmation diff"] = $data['diff'] ?? '';
+			$diffUrl = $data['diff'] ?? '';
+			$fields["$farmName confirmation diff"] = $diffUrl ?
+				Html::element( 'a', [
+					'href' => $diffUrl,
+					'class' => 'mw-ui-button',
+					'target' => '_blank'
+				], 'View' ) : '';
 		}
 
 		$html = Html::openElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ] );
@@ -165,10 +177,10 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			$html .= Html::rawElement( 'div', [ 'class' => 'oo-ui-layout oo-ui-fieldLayout oo-ui-fieldLayout-align-top' ],
 				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldLayout-body' ],
 					Html::rawElement( 'span', [ 'class' => 'oo-ui-fieldLayout-header' ],
-						Html::element( 'label', [ 'class' => 'oo-ui-labelElement-label' ], $label )
+						Html::rawElement( 'label', [ 'class' => 'oo-ui-labelElement-label', 'style' => 'font-weight: bold;' ], htmlspecialchars( $label ) )
 					) .
 					Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldLayout-field' ],
-						Html::element( 'div', [ 'class' => 'oo-ui-widget oo-ui-labelWidget' ], $val )
+						Html::rawElement( 'div', [ 'class' => 'oo-ui-widget oo-ui-labelWidget' ], $val )
 					)
 				)
 			);

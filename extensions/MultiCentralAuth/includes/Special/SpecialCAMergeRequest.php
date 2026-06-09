@@ -24,14 +24,6 @@ class SpecialCAMergeRequest extends SpecialPage {
 		$this->setHeaders();
 
 		$user = $this->getUser();
-		$farms = $this->externalCAProvider->getFarms();
-
-		$farmOptions = [];
-		foreach ( $farms as $farm ) {
-			$farmOptions[$farm['name']] = $farm['id'];
-		}
-		$farmOptions['Both'] = 'both';
-
 		$formDescriptor = [
 			'username' => [
 				'type' => 'text',
@@ -42,24 +34,32 @@ class SpecialCAMergeRequest extends SpecialPage {
 			'farm' => [
 				'type' => 'radio',
 				'label-message' => 'mca-request-farm',
-				'options' => $farmOptions,
+				'options' => [
+					'Wikimedia' => 'wm',
+					'Miraheze' => 'mh',
+					'Both' => 'both',
+				],
 				'required' => true,
 			],
+			'wm_user' => [
+				'type' => 'text',
+				'label' => $this->msg( 'mca-request-farm-user', 'Wikimedia' )->text(),
+			],
+			'wm_diff' => [
+				'type' => 'text',
+				'label' => $this->msg( 'mca-request-farm-diff', 'Wikimedia' )->text(),
+				'help' => $this->msg( 'mca-request-farm-diff-help', 'Wikimedia' )->text(),
+			],
+			'mh_user' => [
+				'type' => 'text',
+				'label' => $this->msg( 'mca-request-farm-user', 'Miraheze' )->text(),
+			],
+			'mh_diff' => [
+				'type' => 'text',
+				'label' => $this->msg( 'mca-request-farm-diff', 'Miraheze' )->text(),
+				'help' => $this->msg( 'mca-request-farm-diff-help', 'Miraheze' )->text(),
+			],
 		];
-
-		foreach ( $farms as $farm ) {
-			$id = $farm['id'];
-			$name = $farm['name'];
-			$formDescriptor["{$id}_user"] = [
-				'type' => 'text',
-				'label' => $this->msg( 'mca-request-farm-user', $name )->text(),
-			];
-			$formDescriptor["{$id}_diff"] = [
-				'type' => 'text',
-				'label' => $this->msg( 'mca-request-farm-diff', $name )->text(),
-				'help' => $this->msg( 'mca-request-farm-diff-help', $name )->text(),
-			];
-		}
 
 		$formDescriptor['comment'] = [
 			'type' => 'textarea',
@@ -74,23 +74,19 @@ class SpecialCAMergeRequest extends SpecialPage {
 
 	public function onSubmit( array $data ) {
 		$selectedFarmId = $data['farm'];
-		$farms = $this->externalCAProvider->getFarms();
 		$externalData = [];
 
 		if ( $selectedFarmId === 'both' ) {
-			foreach ( $farms as $farm ) {
-				$id = $farm['id'];
-				if ( empty( $data["{$id}_user"] ) || empty( $data["{$id}_diff"] ) ) {
-					return [ $this->msg( 'mca-error-farm-required', $farm['name'] ) ];
-				}
-				$externalData[$id] = [
-					'user' => $data["{$id}_user"],
-					'diff' => $data["{$id}_diff"]
-				];
+			if ( empty( $data['wm_user'] ) || empty( $data['wm_diff'] ) ) {
+				return [ $this->msg( 'mca-error-farm-required', 'Wikimedia' ) ];
 			}
+			if ( empty( $data['mh_user'] ) || empty( $data['mh_diff'] ) ) {
+				return [ $this->msg( 'mca-error-farm-required', 'Miraheze' ) ];
+			}
+			$externalData['wm'] = [ 'user' => $data['wm_user'], 'diff' => $data['wm_diff'] ];
+			$externalData['mh'] = [ 'user' => $data['mh_user'], 'diff' => $data['mh_diff'] ];
 		} else {
-			$farmName = '';
-			foreach ( $farms as $f ) if ( $f['id'] === $selectedFarmId ) $farmName = $f['name'];
+			$farmName = $selectedFarmId === 'wm' ? 'Wikimedia' : 'Miraheze';
 			if ( empty( $data["{$selectedFarmId}_user"] ) || empty( $data["{$selectedFarmId}_diff"] ) ) {
 				return [ $this->msg( 'mca-error-farm-required', $farmName ) ];
 			}

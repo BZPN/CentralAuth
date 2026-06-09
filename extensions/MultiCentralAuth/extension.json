@@ -147,7 +147,7 @@
 		"mca-merge-request-submitted": {
 			"primary-link": {
 				"message": "mca-notification-merge-request-submitted-link",
-				"destination": "agent"
+				"destination": "title"
 			},
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
 			"category": "mca-merge-request",
@@ -157,7 +157,7 @@
 		"mca-merge-request-resolved": {
 			"primary-link": {
 				"message": "mca-notification-merge-request-resolved-link",
-				"destination": "agent"
+				"destination": "title"
 			},
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
 			"category": "mca-merge-request",
