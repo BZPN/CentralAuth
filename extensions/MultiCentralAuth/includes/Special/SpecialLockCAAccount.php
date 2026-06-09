@@ -36,8 +36,16 @@ class SpecialLockCAAccount extends SpecialPage {
 	public function execute( $subpage ) {
 		$this->checkPermissions();
 		$this->setHeaders();
+		$this->getOutput()->addModuleStyles( [
+			'oojs-ui-core.styles',
+			'oojs-ui-widgets.styles',
+			'mediawiki.widgets.styles',
+			'ext.multicentralauth.styles'
+		] );
 
 		$target = $this->getRequest()->getText( 'target', $subpage );
+
+		$this->getOutput()->addHTML( Html::element( 'p', [], $this->msg( 'mca-lock-intro' )->text() ) );
 
 		$formDescriptor = [
 			'target' => [
@@ -51,6 +59,7 @@ class SpecialLockCAAccount extends SpecialPage {
 				'type' => 'expiry',
 				'name' => 'expiry',
 				'label-message' => 'mca-lock-expiry',
+				'options-message' => 'mca-lock-expiry-options',
 				'required' => true,
 			],
 			'reason' => [
@@ -58,6 +67,7 @@ class SpecialLockCAAccount extends SpecialPage {
 				'name' => 'reason',
 				'label-message' => 'mca-lock-reason',
 				'options-message' => 'mca-lock-reason-dropdown',
+				'cssclass' => 'mca-mobile-full-width',
 			],
 			'unmerge' => [
 				'type' => 'check',
@@ -76,13 +86,21 @@ class SpecialLockCAAccount extends SpecialPage {
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 		$htmlForm->setSubmitTextMsg( 'lockcaaccount' );
-		$htmlForm->show();
+		$htmlForm->setSubmitDestructive( true );
+		$htmlForm->prepareForm();
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'lockcaaccount', 'mca-header-type-view' ) );
 	}
 
 	public function onSubmit( array $formData ) {
 		$targetName = $formData['target'];
 		$expiry = $formData['expiry'];
 		$reason = $formData['reason'];
+
+		if ( is_array( $reason ) ) {
+			$reason = $reason[0] ?? '';
+		}
+
 		$unmerge = $formData['unmerge'];
 		$blockips = $formData['blockips'];
 
@@ -167,5 +185,18 @@ class SpecialLockCAAccount extends SpecialPage {
 
 			$this->blockManager->placeBlock( $block );
 		}
+	}
+
+	private function getFramedFieldsetLayout( $html, $legendMsg, $headerClass = '' ): string {
+		if ( is_array( $legendMsg ) ) {
+			$label = $this->msg( ...$legendMsg )->text();
+		} else {
+			$label = $this->msg( $legendMsg )->text();
+		}
+
+		return Html::rawElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ],
+			Html::rawElement( 'h2', [ 'class' => 'mca-box-header ' . $headerClass ], $label ) .
+			Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ], $html )
+		);
 	}
 }
