@@ -198,6 +198,7 @@ class SpecialManageCA extends SpecialPage {
 				'type' => 'text',
 				'name' => 'subdomain',
 				'label-message' => 'mca-manage-subdomain',
+				'id' => 'mca-subdomain-field',
 			],
 			'domain' => [
 				'type' => 'select',

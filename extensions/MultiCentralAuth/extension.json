@@ -167,7 +167,8 @@
 	},
 	"EchoNotificationCategories": {
 		"mca-merge-request": {
-			"priority": 3
+			"priority": 3,
+			"tooltip": "echo-category-title-mca-merge-request"
 		}
 	},
 	"EchoNotificationIcons": {
