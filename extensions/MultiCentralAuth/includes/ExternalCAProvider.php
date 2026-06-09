@@ -169,17 +169,24 @@ class ExternalCAProvider {
 	}
 
 	public function isValidWiki( string $hostname ): bool {
-		$url = "https://$hostname/w/api.php?" . http_build_query( [
+		$paths = [ '/w/api.php', '/api.php' ];
+		$query = '?' . http_build_query( [
 			'action' => 'query',
 			'meta' => 'siteinfo',
 			'format' => 'json',
 			'formatversion' => 2,
 		] );
 
-		$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
-		$status = $request->execute();
+		foreach ( $paths as $path ) {
+			$url = "https://$hostname$path$query";
+			$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+			$status = $request->execute();
+			if ( $status->isOK() ) {
+				return true;
+			}
+		}
 
-		return $status->isOK();
+		return false;
 	}
 
 	public function fetchUserMetadata( string $hostname, string $username ): ?array {

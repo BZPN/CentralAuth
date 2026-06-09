@@ -362,6 +362,30 @@ class SpecialManageCA extends SpecialPage {
 			$user = $this->userFactory->newFromName( $targetName );
 		}
 
+		// Check if already attached or merged (and not suppressed)
+		$allManual = $this->externalCAProvider->getLocalAttachedWikis( $user->getId(), true );
+		if ( in_array( $hostname, $allManual ) ) {
+			return $this->msg( 'mca-manage-error-already-attached', $hostname );
+		}
+
+		$allSuppressed = $this->externalCAProvider->getSuppressedWikis( $user->getId(), true );
+		$externalUsernames = $this->externalCAProvider->getExternalUsernames( $user->getId() );
+		$farms = $this->externalCAProvider->getFarms();
+
+		foreach ( $farms as $farm ) {
+			if ( $farm['is_centralauth'] && $farm['api_url'] && isset( $externalUsernames[$farm['id']] ) ) {
+				$data = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $externalUsernames[$farm['id']] );
+				$merged = $data['merged'] ?? [];
+				foreach ( $merged as $m ) {
+					$parsed = parse_url( $m['url'] );
+					$host = isset( $parsed['host'] ) ? strtolower( $parsed['host'] ) : null;
+					if ( $host === $hostname && !in_array( $host, $allSuppressed ) ) {
+						return $this->msg( 'mca-manage-error-already-attached', $hostname );
+					}
+				}
+			}
+		}
+
 		$dbw = $this->dbProvider->getPrimaryDatabase();
 
 		$dbw->insert(

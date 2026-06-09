@@ -80,6 +80,7 @@
 	"mca-error-invalid-user": "Invalid username.",
 	"mca-error-user-not-found": "User not found.",
 	"mca-manage-error-wiki-not-found": "The wiki $1 does not exist or is not reachable.",
+	"mca-manage-error-already-attached": "The wiki $1 is already attached to your account.",
 	"mca-merge-success": "Accounts merged successfully for $1.",
 	"mca-unmerge-success": "Accounts unmerged successfully for $1.",
 	"mca-manage-success": "Changes saved successfully.",
