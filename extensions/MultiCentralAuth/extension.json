@@ -152,7 +152,7 @@
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
 			"category": "mca-merge-request",
 			"group": "positive",
-			"icon": "feedback"
+			"icon": "mca-icon"
 		},
 		"mca-merge-request-resolved": {
 			"primary-link": {
@@ -162,12 +162,17 @@
 			"presentation-model": "MediaWiki\\Extension\\MultiCentralAuth\\MCAMergeRequestPresentationModel",
 			"category": "mca-merge-request",
 			"group": "positive",
-			"icon": "feedback"
+			"icon": "mca-icon"
 		}
 	},
 	"EchoNotificationCategories": {
 		"mca-merge-request": {
 			"priority": 3
+		}
+	},
+	"EchoNotificationIcons": {
+		"mca-icon": {
+			"path": "MultiCentralAuth/resources/icons/merged-primary.png"
 		}
 	},
 	"DefaultUserOptions": {

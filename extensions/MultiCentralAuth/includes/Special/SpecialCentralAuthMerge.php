@@ -121,8 +121,8 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			$logEntry->setParameters( [
 				'4::systems' => $systemList,
 			] );
-			$logEntry->insert();
-			$logEntry->publish( $logEntry->insert() );
+			$logId = $logEntry->insert();
+			$logEntry->publish( $logId );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-merge-success', $localUserName )->parse() ) );
