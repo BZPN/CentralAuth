@@ -95,7 +95,9 @@
 		"ext.multicentralauth.js": {
 			"scripts": "resources/ext.multicentralauth.js",
 			"dependencies": [
-				"mediawiki.util"
+				"mediawiki.util",
+				"oojs-ui-core",
+				"oojs-ui-widgets"
 			],
 			"messages": [
 				"centralauth-merge-method-primary",
