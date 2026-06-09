@@ -168,9 +168,8 @@ class SpecialCentralAuthSettings extends SpecialPage {
 				'label-message' => 'mca-settings-farm-id',
 				'default' => $id,
 			],
-			'hidden_id' => [
+			'farm_id_hidden' => [
 				'type' => 'hidden',
-				'name' => 'id',
 				'default' => $id,
 			],
 			'name' => [
@@ -208,12 +207,12 @@ class SpecialCentralAuthSettings extends SpecialPage {
 	}
 
 	public function onEditSubmit( array $data ) {
-		$id = $data['id'];
+		$id = $data['farm_id_hidden'];
 		$dbw = $this->dbProvider->getPrimaryDatabase();
 		$dbw->update( 'mca_farms', [
 			'mf_display_name' => $data['name'],
 			'mf_api_url' => $data['api_url'],
-			'mf_is_centralauth' => $data['is_centralauth'],
+			'mf_is_centralauth' => (int)$data['is_centralauth'],
 			'mf_header_msg' => $data['header_msg'],
 		], [ 'mf_id' => $id ], __METHOD__ );
 
