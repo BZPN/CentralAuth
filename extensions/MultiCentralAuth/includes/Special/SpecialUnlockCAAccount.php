@@ -59,7 +59,7 @@ class SpecialUnlockCAAccount extends SpecialPage {
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
 		$htmlForm->setSubmitCallback( [ $this, 'onSubmit' ] );
 		$htmlForm->setSubmitTextMsg( 'unlockcaaccount' );
-		$htmlForm->setSubmitProgressive( true );
+		$htmlForm->setSubmitDestructive( false );
 		$htmlForm->prepareForm();
 
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'unlockcaaccount', 'mca-header-type-view' ) );
