@@ -205,9 +205,11 @@ class SpecialManageCA extends SpecialPage {
 			}
 		}
 
-		$allFarmWikis = [];
-		foreach ( $farmWikis as $wikis ) {
-			$allFarmWikis += $wikis;
+		$allCustomFarmWikis = [];
+		foreach ( $farmWikis as $farmId => $wikis ) {
+			if ( $farmId !== 'wm' && $farmId !== 'mh' ) {
+				$allCustomFarmWikis += $wikis;
+			}
 		}
 
 		$formDescriptor = [
@@ -224,7 +226,7 @@ class SpecialManageCA extends SpecialPage {
 				'type' => 'select',
 				'name' => 'dynamic_wiki',
 				'label-message' => 'mca-manage-wiki-selection',
-				'options' => $allFarmWikis,
+				'options' => $allCustomFarmWikis,
 				'id' => 'mca-wiki-select',
 				'infusable' => true,
 			],

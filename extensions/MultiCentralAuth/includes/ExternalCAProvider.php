@@ -170,6 +170,7 @@ class ExternalCAProvider {
 
 	public function isValidWiki( string $hostname ): bool {
 		$paths = [ '/w/api.php', '/api.php' ];
+		$protocols = [ 'https://', 'http://' ];
 		$query = '?' . http_build_query( [
 			'action' => 'query',
 			'meta' => 'siteinfo',
@@ -177,12 +178,14 @@ class ExternalCAProvider {
 			'formatversion' => 2,
 		] );
 
-		foreach ( $paths as $path ) {
-			$url = "https://$hostname$path$query";
-			$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
-			$status = $request->execute();
-			if ( $status->isOK() ) {
-				return true;
+		foreach ( $protocols as $proto ) {
+			foreach ( $paths as $path ) {
+				$url = "$proto$hostname$path$query";
+				$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+				$status = $request->execute();
+				if ( $status->isOK() ) {
+					return true;
+				}
 			}
 		}
 
@@ -191,6 +194,7 @@ class ExternalCAProvider {
 
 	public function fetchUserMetadata( string $hostname, string $username ): ?array {
 		$paths = [ '/w/api.php', '/api.php' ];
+		$protocols = [ 'https://', 'http://' ];
 		$query = '?' . http_build_query( [
 			'action' => 'query',
 			'list' => 'users',
@@ -201,13 +205,17 @@ class ExternalCAProvider {
 		] );
 
 		$data = null;
-		foreach ( $paths as $path ) {
-			$url = "https://$hostname$path$query";
-			$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
-			$status = $request->execute();
-			if ( $status->isOK() ) {
-				$data = json_decode( $request->getContent(), true );
-				break;
+		foreach ( $protocols as $proto ) {
+			foreach ( $paths as $path ) {
+				$url = "$proto$hostname$path$query";
+				$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+				$status = $request->execute();
+				if ( $status->isOK() ) {
+					$data = json_decode( $request->getContent(), true );
+					if ( $data ) {
+						break 2;
+					}
+				}
 			}
 		}
 
