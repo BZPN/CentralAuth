@@ -109,11 +109,14 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 			$logEntry->setPerformer( $this->getUser() );
 			$logEntry->setTarget( $targetUser->getUserPage() );
 			$logEntry->setComment( $comment );
+
+			$farmParam = $formData['farm'] ?? 'all';
+			$farmName = $farmParam === 'wm' ? 'Wikimedia' : ( $farmParam === 'mh' ? 'Miraheze' : 'All' );
 			$logEntry->setParameters( [
-				'4::systems' => $formData['farm'] ?? 'All'
+				'4::systems' => $farmName
 			] );
-			$logEntry->insert();
-			$logEntry->publish( $logEntry->insert() );
+			$logId = $logEntry->insert();
+			$logEntry->publish( $logId );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unmerge-success', $localUserName )->parse() ) );

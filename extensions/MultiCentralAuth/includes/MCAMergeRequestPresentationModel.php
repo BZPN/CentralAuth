@@ -7,7 +7,7 @@ use MediaWiki\Extension\Notifications\Formatters\EchoEventPresentationModel;
 class MCAMergeRequestPresentationModel extends EchoEventPresentationModel {
 
 	public function getIconType() {
-		return 'feedback';
+		return 'mca-icon';
 	}
 
 	public function getPrimaryLink() {
@@ -22,7 +22,10 @@ class MCAMergeRequestPresentationModel extends EchoEventPresentationModel {
 		if ( $type === 'mca-merge-request-submitted' ) {
 			return $this->msg( 'mca-notification-header-submitted', $this->event->getAgent()->getName() );
 		}
-		return $this->msg( 'mca-notification-header-resolved', $this->event->getExtraParam( 'status' ) );
+		return $this->msg( 'mca-notification-header-resolved',
+			$this->event->getExtraParam( 'status' ),
+			$this->event->getExtraParam( 'gender' )
+		);
 	}
 
 	public function getBodyMessage() {

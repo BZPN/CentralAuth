@@ -38,6 +38,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 
 		// Search form
 		$form = Html::openElement( 'form', [ 'method' => 'get', 'action' => $this->getPageTitle()->getLocalURL() ] );
+		$form .= Html::hidden( 'title', $this->getPageTitle()->getPrefixedText() );
 		$form .= Html::rawElement( 'div', [ 'class' => 'mw-ui-vform' ],
 			Html::rawElement( 'div', [ 'class' => 'mw-ui-field' ],
 				Html::element( 'label', [], "Search by user:" ) .
@@ -102,10 +103,13 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			elseif ( $row->mmr_status === 'rejected' ) $statusClass = 'mw-message-box-error';
 			elseif ( $row->mmr_status === 'open' ) $statusClass = 'mw-message-box-warning';
 
+			$statusLabel = ucfirst( $row->mmr_status );
 			$table .= Html::openElement( 'tr' ) .
 				Html::element( 'td', [], $row->mmr_id ) .
 				Html::element( 'td', [], $user ? $user->getName() : 'Unknown' ) .
-				Html::rawElement( 'td', [ 'class' => $statusClass ], Html::element( 'b', [], $row->mmr_status ) ) .
+				Html::rawElement( 'td', [ 'style' => 'text-align: center;' ],
+					Html::rawElement( 'span', [ 'class' => $statusClass, 'style' => 'padding: 2px 5px; border-radius: 3px; font-weight: bold;' ], $statusLabel )
+				) .
 				Html::element( 'td', [], $this->getLanguage()->userTimeAndDate( $row->mmr_timestamp, $this->getUser() ) ) .
 				Html::rawElement( 'td', [], Html::element( 'a', [
 					'href' => $this->getPageTitle( "view/{$row->mmr_id}" )->getFullURL()
@@ -148,17 +152,28 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 		];
 
 		foreach ( $extData as $farmId => $data ) {
-			$fields["Farm $farmId User"] = $data['user'] ?? '';
-			$fields["Farm $farmId Diff"] = $data['diff'] ?? '';
+			$farmName = $farmId === 'wm' ? 'Wikimedia' : ( $farmId === 'mh' ? 'Miraheze' : ucfirst( $farmId ) );
+			$fields["$farmName username"] = $data['user'] ?? '';
+			$fields["$farmName confirmation diff"] = $data['diff'] ?? '';
 		}
 
 		$html = Html::openElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ] );
 		$html .= Html::element( 'h2', [ 'class' => 'mca-box-header' ], $this->msg( 'mca-request-details-title' )->text() );
-		$html .= Html::openElement( 'ul' );
+
+		$html .= Html::openElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ] );
 		foreach ( $fields as $label => $val ) {
-			$html .= Html::rawElement( 'li', [], "'''$label''': " . htmlspecialchars( $val ) );
+			$html .= Html::rawElement( 'div', [ 'class' => 'oo-ui-layout oo-ui-fieldLayout oo-ui-fieldLayout-align-top' ],
+				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldLayout-body' ],
+					Html::rawElement( 'span', [ 'class' => 'oo-ui-fieldLayout-header' ],
+						Html::element( 'label', [ 'class' => 'oo-ui-labelElement-label' ], $label )
+					) .
+					Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldLayout-field' ],
+						Html::element( 'div', [ 'class' => 'oo-ui-widget oo-ui-labelWidget' ], $val )
+					)
+				)
+			);
 		}
-		$html .= Html::closeElement( 'ul' );
+		$html .= Html::closeElement( 'div' );
 		$html .= Html::closeElement( 'div' );
 
 		$this->getOutput()->addHTML( $html );
@@ -181,6 +196,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			'comment' => [
 				'type' => 'textarea',
 				'label' => 'Comment',
+				'rows' => 3,
 			],
 		];
 

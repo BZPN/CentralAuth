@@ -64,7 +64,7 @@ class Hooks {
 		if ( $targets ) {
 			\EchoEvent::create( [
 				'type' => 'mca-merge-request-submitted',
-				'title' => \MediaWiki\Title\Title::newFromText( "Special:CAMergeRequestQueue/view/$requestId" ),
+				'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 				'extra' => [
 					'request-id' => $requestId,
 					'user-id' => $user->getId(),
@@ -82,10 +82,11 @@ class Hooks {
 
 		\EchoEvent::create( [
 			'type' => 'mca-merge-request-resolved',
-			'title' => \MediaWiki\Title\Title::newFromText( "Special:CAMergeRequestQueue/view/$requestId" ),
+			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 			'extra' => [
 				'request-id' => $requestId,
 				'status' => $status,
+				'gender' => $user->getOption( 'gender' ),
 			],
 			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newAnonymous(),
 			'targets' => [ $user ],

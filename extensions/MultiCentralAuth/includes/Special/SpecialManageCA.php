@@ -42,6 +42,15 @@ class SpecialManageCA extends SpecialPage {
 		$this->checkPermissions();
 		$this->setHeaders();
 
+		$farms = $this->externalCAProvider->getFarms();
+		$farmWikis = [];
+		foreach ( $farms as $farm ) {
+			$wikis = $this->externalCAProvider->getFarmWikis( $farm['id'] );
+			foreach ( $wikis as $w ) {
+				$farmWikis[$farm['id']][$w] = $w;
+			}
+		}
+
 		$targetName = $this->getRequest()->getText( 'target' );
 		$user = $this->getUser();
 
@@ -125,8 +134,8 @@ class SpecialManageCA extends SpecialPage {
 					$logEntry->setTarget( $user->getUserPage() );
 					$logEntry->setComment( $comment );
 					$logEntry->setParameters( [ '4::wiki' => $wikiId ] );
-					$logEntry->insert();
-					$logEntry->publish( $logEntry->insert() );
+					$logId = $logEntry->insert();
+					$logEntry->publish( $logId );
 				}
 
 				// Auto-unmerge logic: if all wikis of a farm are removed, remove the external ID
@@ -163,18 +172,9 @@ class SpecialManageCA extends SpecialPage {
 		) );
 
 		// 2. Add form
-		$farms = $this->externalCAProvider->getFarms();
 		$farmOptions = [ 'Manual entry' => 'manual' ];
 		foreach ( $farms as $farm ) {
 			$farmOptions[$farm['name']] = $farm['id'];
-		}
-
-		$farmWikis = [];
-		foreach ( $farms as $farm ) {
-			$wikis = $this->externalCAProvider->getFarmWikis( $farm['id'] );
-			foreach ( $wikis as $w ) {
-				$farmWikis[$farm['id']][$w] = $w;
-			}
 		}
 
 		$formDescriptor = [
@@ -351,8 +351,8 @@ class SpecialManageCA extends SpecialPage {
 		$logEntry->setTarget( $user->getUserPage() );
 		$logEntry->setComment( $comment );
 		$logEntry->setParameters( [ '4::wiki' => $hostname ] );
-		$logEntry->insert();
-		$logEntry->publish( $logEntry->insert() );
+		$logId = $logEntry->insert();
+		$logEntry->publish( $logId );
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-manage-merged-success', $hostname )->parse() ) );
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'target' => $user->getName() ] ) );
