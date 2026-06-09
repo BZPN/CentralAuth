@@ -99,6 +99,9 @@ class SpecialCentralAuth extends SpecialPage {
 			$extUsername = $externalUsernames[$farmId] ?? null;
 			if ( $extUsername || $farmManual ) {
 				$headerMsg = $farm['header_msg'] ?? 'mca-header-list-generic';
+				if ( $farm['header_msg'] === null ) {
+					$headerMsg = [ 'mca-header-list-generic', $farm['name'] ];
+				}
 				if ( $farm['is_centralauth'] && $farm['api_url'] ) {
 					$farmData = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $extUsername ?? '' );
 					$this->showExternalData(
@@ -111,7 +114,7 @@ class SpecialCentralAuth extends SpecialPage {
 					);
 				} else {
 					// Direct API farm or no CentralAuth
-					$this->showOtherManualData( $user, $farmManual, $farm['name'], [ $headerMsg, $farm['name'] ] );
+					$this->showOtherManualData( $user, $farmManual, $farm['name'], $headerMsg );
 				}
 			}
 		}

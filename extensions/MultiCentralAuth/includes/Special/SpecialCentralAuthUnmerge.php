@@ -33,6 +33,17 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 				'label-message' => 'mca-unmerge-local-user',
 				'required' => true,
 			],
+			'farm' => [
+				'type' => 'radio',
+				'name' => 'farm',
+				'label-message' => 'mca-unmerge-farm',
+				'options' => [
+					'Wikimedia' => 'wm',
+					'Miraheze' => 'mh',
+					'All' => 'all',
+				],
+				'default' => 'all',
+			],
 			'comment' => [
 				'type' => 'text',
 				'name' => 'comment',
@@ -49,6 +60,7 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 	public function onSubmit( array $formData ) {
 		$localUserName = $formData['local_user'];
 		$comment = $formData['comment'];
+		$farm = $formData['farm'];
 
 		$user = $this->userNameUtils->getCanonical( $localUserName );
 		if ( !$user ) {
@@ -66,23 +78,42 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 			return [ 'mca-error-user-not-found' ];
 		}
 
-		$dbw->delete(
-			'mca_external_ids',
-			[ 'mei_user_id' => $localUserId ],
-			__METHOD__
-		);
+		if ( $farm === 'all' ) {
+			$dbw->delete(
+				'mca_external_userids',
+				[ 'meu_user_id' => $localUserId ],
+				__METHOD__
+			);
+			if ( $dbw->tableExists( 'mca_external_ids' ) ) {
+				$dbw->delete(
+					'mca_external_ids',
+					[ 'mei_user_id' => $localUserId ],
+					__METHOD__
+				);
+			}
+		} else {
+			$dbw->delete(
+				'mca_external_userids',
+				[
+					'meu_user_id' => $localUserId,
+					'meu_farm_id' => $farm,
+				],
+				__METHOD__
+			);
+		}
 
 		// Log action
 		$targetUser = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromName( $localUserName );
 		if ( $targetUser ) {
-			$logEntry = new \LogPage( 'mca-log' );
-			$logEntry->addEntry(
-				'unmerge',
-				$targetUser->getUserPage(),
-				$comment,
-				[ $this->getUser()->getName() ],
-				$this->getUser()
-			);
+			$logEntry = new \ManualLogEntry( 'mca-log', 'unmerge' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $targetUser->getUserPage() );
+			$logEntry->setComment( $comment );
+			$logEntry->setParameters( [
+				'4::systems' => $formData['farm'] ?? 'All'
+			] );
+			$logEntry->insert();
+			$logEntry->publish( $logEntry->insert() );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unmerge-success', $localUserName )->parse() ) );

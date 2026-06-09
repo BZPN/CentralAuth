@@ -32,7 +32,8 @@ class SpecialCentralAuthMerge extends SpecialPage {
 
 		$requestId = $this->getRequest()->getText( 'requestId' );
 		$targetUser = $this->getRequest()->getText( 'targetUser' );
-		$farms = $this->externalCAProvider->getFarms();
+		$wmUser = $this->getRequest()->getText( 'wmUser' );
+		$mhUser = $this->getRequest()->getText( 'mhUser' );
 
 		$formDescriptor = [
 			'local_user' => [
@@ -43,25 +44,28 @@ class SpecialCentralAuthMerge extends SpecialPage {
 				'default' => $targetUser,
 				'readonly' => (bool)$requestId,
 			],
-		];
-
-		foreach ( $farms as $farm ) {
-			$id = $farm['id'];
-			$formDescriptor["{$id}_user"] = [
+			'wm_user' => [
 				'type' => 'text',
-				'name' => "{$id}_user",
-				'label' => "{$farm['name']} username",
-				'default' => $this->getRequest()->getText( "{$id}User" ),
-			];
-		}
-
-		$formDescriptor['comment'] = [
-			'type' => 'text',
-			'name' => 'comment',
-			'label-message' => 'mca-comment',
-			'required' => true,
-			'default' => $requestId ? "Merging... per request [[Special:CAMergeRequestQueue/view/$requestId|$requestId]]" : '',
-			'readonly' => (bool)$requestId,
+				'name' => 'wm_user',
+				'label-message' => 'mca-merge-wm-user',
+				'help-message' => 'mca-merge-wm-user-help',
+				'default' => $wmUser,
+			],
+			'mh_user' => [
+				'type' => 'text',
+				'name' => 'mh_user',
+				'label-message' => 'mca-merge-mh-user',
+				'help-message' => 'mca-merge-mh-user-help',
+				'default' => $mhUser,
+			],
+			'comment' => [
+				'type' => 'text',
+				'name' => 'comment',
+				'label-message' => 'mca-comment',
+				'required' => true,
+				'default' => $requestId ? $this->msg( 'mca-log-per-request', $requestId )->text() : '',
+				'readonly' => (bool)$requestId,
+			],
 		];
 
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
@@ -72,7 +76,8 @@ class SpecialCentralAuthMerge extends SpecialPage {
 	public function onSubmit( array $formData ) {
 		$localUserName = $formData['local_user'];
 		$comment = $formData['comment'];
-		$farms = $this->externalCAProvider->getFarms();
+		$wmUser = $formData['wm_user'] ?: null;
+		$mhUser = $formData['mh_user'] ?: null;
 
 		$user = $this->userNameUtils->getCanonical( $localUserName );
 		if ( !$user ) {
@@ -90,46 +95,55 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			return [ 'mca-error-user-not-found' ];
 		}
 
-		$logData = [];
-		foreach ( $farms as $farm ) {
-			$id = $farm['id'];
-			$extUser = $formData["{$id}_user"] ?? null;
-			if ( $extUser ) {
-				$dbw->delete(
-					'mca_external_userids',
-					[
-						'meu_user_id' => $localUserId,
-						'meu_farm_id' => $id,
-					],
-					__METHOD__
-				);
-				$dbw->insert(
-					'mca_external_userids',
-					[
-						'meu_user_id' => $localUserId,
-						'meu_farm_id' => $id,
-						'meu_external_username' => $extUser,
-					],
-					__METHOD__
-				);
-				$logData[] = "$id: $extUser";
-			}
+		$systems = [];
+		if ( $wmUser ) {
+			$this->saveExternalId( $localUserId, 'wm', $wmUser );
+			$systems[] = 'Wikimedia';
+		}
+		if ( $mhUser ) {
+			$this->saveExternalId( $localUserId, 'mh', $mhUser );
+			$systems[] = 'Miraheze';
+		}
+
+		if ( !$systems ) {
+			return [ 'mca-error-no-systems-selected' ];
 		}
 
 		// Log action
 		$targetUser = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromName( $localUserName );
 		if ( $targetUser ) {
-			$logEntry = new \LogPage( 'mca-log' );
-			$logEntry->addEntry(
-				'merge',
-				$targetUser->getUserPage(),
-				$comment,
-				[ implode( ', ', $logData ), $this->getUser()->getName() ],
-				$this->getUser()
-			);
+			$logEntry = new \ManualLogEntry( 'mca-log', 'merge' );
+			$logEntry->setPerformer( $this->getUser() );
+			$logEntry->setTarget( $targetUser->getUserPage() );
+			$logEntry->setComment( $comment );
+
+			$systemList = implode( ' and ', $systems ) . " CentralAuth";
+			$logEntry->setParameters( [
+				'4::systems' => $systemList,
+			] );
+			$logEntry->insert();
+			$logEntry->publish( $logEntry->insert() );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-merge-success', $localUserName )->parse() ) );
 		return true;
+	}
+
+	private function saveExternalId( int $userId, string $farmId, string $externalUser ) {
+		$dbw = $this->dbProvider->getPrimaryDatabase();
+		$dbw->delete( 'mca_external_userids', [ 'meu_user_id' => $userId, 'meu_farm_id' => $farmId ], __METHOD__ );
+		$dbw->insert( 'mca_external_userids', [
+			'meu_user_id' => $userId,
+			'meu_farm_id' => $farmId,
+			'meu_external_username' => $externalUser,
+		], __METHOD__ );
+
+		// Clear manual attachments for this farm as they are now redundant
+		$wikis = $this->externalCAProvider->getLocalAttachedWikis( $userId, true );
+		foreach ( $wikis as $wiki ) {
+			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === $farmId ) {
+				$dbw->delete( 'mca_local_attachments', [ 'mla_user_id' => $userId, 'mla_wiki_id' => $wiki ], __METHOD__ );
+			}
+		}
 	}
 }
