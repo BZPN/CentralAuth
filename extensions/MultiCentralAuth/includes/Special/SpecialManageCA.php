@@ -305,11 +305,12 @@ class SpecialManageCA extends SpecialPage {
 			$manual = $farmManual[$farmId];
 
 			if ( $extUsername || $manual ) {
+				$header = $farm['header_msg'] ?: [ 'mca-header-list-generic', $farm['name'] ];
 				if ( $farm['is_centralauth'] && $farm['api_url'] ) {
 					$data = $this->externalCAProvider->fetchGlobalUserInfo( $farm['api_url'], $extUsername ?? '' );
-					$this->showExternalData( $data, $extUsername ?? $user->getName(), $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic', $manual, $suppressedWikis );
+					$this->showExternalData( $data, $extUsername ?? $user->getName(), $farm['name'], $header, $manual, $suppressedWikis );
 				} else {
-					$this->showOtherManualData( $user, $manual, $farm['name'], $farm['header_msg'] ?? 'mca-header-list-generic' );
+					$this->showOtherManualData( $user, $manual, $farm['name'], $header );
 				}
 			}
 		}
@@ -360,6 +361,11 @@ class SpecialManageCA extends SpecialPage {
 		$user = $this->getUser();
 		if ( $this->getAuthority()->isAllowed( 'ca-merge' ) && $targetName ) {
 			$user = $this->userFactory->newFromName( $targetName );
+		}
+
+		// Check if user exists on the target wiki
+		if ( !$this->externalCAProvider->fetchUserMetadata( $hostname, $user->getName() ) ) {
+			return $this->msg( 'mca-manage-error-user-not-registered', $user->getName(), $hostname );
 		}
 
 		// Check if already attached or merged (and not suppressed)
@@ -439,7 +445,7 @@ class SpecialManageCA extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'mca-header-view', 'mca-header-type-view' ) );
 	}
 
-	private function showExternalData( ?array $data, string $username, string $sourceName, string $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
+	private function showExternalData( ?array $data, string $username, string $sourceName, $tableHeaderMsg, array $manualWikis, array $suppressedWikis ) {
 		$merged = $data['merged'] ?? [];
 		$rows = [];
 		$attachedWikis = [];
@@ -492,7 +498,7 @@ class SpecialManageCA extends SpecialPage {
 		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $table, $tableHeaderMsg, 'mca-header-type-list' ) );
 	}
 
-	private function showOtherManualData( $user, array $manualWikis, string $farmName, string $headerMsg ) {
+	private function showOtherManualData( $user, array $manualWikis, string $farmName, $headerMsg ) {
 		$rows = [];
 		foreach ( $manualWikis as $wikiHost ) {
 			$metadata = $this->externalCAProvider->fetchUserMetadata( $wikiHost, $user->getName() ) ?? [];
