@@ -19,7 +19,8 @@
 			"ca-merge": true,
 			"ca-manage": true,
 			"ca-admin": true,
-			"ca-request-view": true
+			"ca-request-view": true,
+			"ca-lock": true
 		}
 	},
 	"SpecialPages": {
@@ -77,6 +78,30 @@
 			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCentralAuthSettings",
 			"services": [
 				"ConnectionProvider"
+			]
+		},
+		"LockCAAccount": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialLockCAAccount",
+			"services": [
+				"ConnectionProvider",
+				"UserNameUtils",
+				"BlockManager",
+				"UserFactory"
+			]
+		},
+		"UnlockCAAccount": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialUnlockCAAccount",
+			"services": [
+				"ConnectionProvider",
+				"UserNameUtils",
+				"UserFactory"
+			]
+		},
+		"CALockList": {
+			"class": "MediaWiki\\Extension\\MultiCentralAuth\\Special\\SpecialCALockList",
+			"services": [
+				"ConnectionProvider",
+				"UserFactory"
 			]
 		}
 	},
@@ -137,13 +162,16 @@
 		"mca-log/merge": "LogFormatter",
 		"mca-log/unmerge": "LogFormatter",
 		"mca-log/manage-add": "LogFormatter",
-		"mca-log/manage-remove": "LogFormatter"
+		"mca-log/manage-remove": "LogFormatter",
+		"mca-log/lock": "LogFormatter",
+		"mca-log/unlock": "LogFormatter"
 	},
 	"Hooks": {
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onLoadExtensionSchemaUpdates",
 		"ContributionsToolLinks": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onContributionsToolLinks",
 		"MCAMergeRequestSubmitted": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestSubmitted",
-		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved"
+		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
+		"CheckCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onCheckCanLogin"
 	},
 	"EchoNotifications": {
 		"mca-merge-request-submitted": {
@@ -187,7 +215,8 @@
 		"ca-manage",
 		"ca-request",
 		"ca-admin",
-		"ca-request-view"
+		"ca-request-view",
+		"ca-lock"
 	],
 	"manifest_version": 2
 }
