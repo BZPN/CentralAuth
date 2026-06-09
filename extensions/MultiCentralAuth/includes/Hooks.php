@@ -99,6 +99,7 @@ class Hooks {
 	}
 
 	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
+		// $user is UserIdentity here.
 		if ( !$user->isRegistered() ) {
 			return;
 		}

@@ -39,6 +39,7 @@ class SpecialLockCAAccount extends SpecialPage {
 			'oojs-ui-widgets.styles',
 			'oojs-ui.styles.icons-editing-styling',
 			'oojs-ui.styles.icons-moderation',
+			'oojs-ui.styles.icons-interactions',
 			'mediawiki.widgets.styles',
 			'mediawiki.widgets.DateInputWidget.styles',
 			'ext.multicentralauth.styles'
