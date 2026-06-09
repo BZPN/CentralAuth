@@ -23,6 +23,8 @@ class SpecialCentralAuthSettings extends SpecialPage {
 
 		if ( $subpage === 'add' ) {
 			$this->showAddForm();
+		} elseif ( $subpage === 'edit' ) {
+			$this->showEditForm();
 		} elseif ( $subpage === 'delete' ) {
 			$this->showDeleteConfirm();
 		} else {
@@ -57,10 +59,17 @@ class SpecialCentralAuthSettings extends SpecialPage {
 				Html::element( 'td', [], $farm->mf_display_name ) .
 				Html::element( 'td', [], $farm->mf_api_url ) .
 				Html::element( 'td', [], $farm->mf_is_centralauth ? 'Yes' : 'No' ) .
-				Html::rawElement( 'td', [], Html::element( 'a', [
-					'href' => $this->getPageTitle( 'delete' )->getFullURL( [ 'id' => $farm->mf_id ] ),
-					'class' => 'mw-ui-button mw-ui-destructive'
-				], 'Delete' ) ) .
+				Html::rawElement( 'td', [],
+					Html::element( 'a', [
+						'href' => $this->getPageTitle( 'edit' )->getFullURL( [ 'id' => $farm->mf_id ] ),
+						'class' => 'mw-ui-button mw-ui-progressive'
+					], $this->msg( 'mca-settings-edit' )->text() ) .
+					Html::element( 'a', [
+						'href' => $this->getPageTitle( 'delete' )->getFullURL( [ 'id' => $farm->mf_id ] ),
+						'class' => 'mw-ui-button mw-ui-destructive',
+						'style' => 'margin-left: 0.5em;'
+					], $this->msg( 'mca-settings-delete' )->text() )
+				) .
 				Html::closeElement( 'tr' );
 		}
 		$table .= Html::closeElement( 'table' );
@@ -72,29 +81,29 @@ class SpecialCentralAuthSettings extends SpecialPage {
 		$formDescriptor = [
 			'id' => [
 				'type' => 'text',
-				'label' => 'Farm ID (e.g. fandom)',
+				'label-message' => 'mca-settings-farm-id',
 				'required' => true,
 			],
 			'name' => [
 				'type' => 'text',
-				'label' => 'Display Name',
+				'label-message' => 'mca-settings-display-name',
 				'required' => true,
 			],
 			'api_url' => [
 				'type' => 'text',
-				'label' => 'API URL',
+				'label-message' => 'mca-settings-api-url-label',
 			],
 			'is_centralauth' => [
 				'type' => 'check',
-				'label' => 'Is CentralAuth enabled?',
+				'label-message' => 'mca-settings-centralauth-label',
 			],
 			'header_msg' => [
 				'type' => 'text',
-				'label' => 'Header message key',
+				'label-message' => 'mca-settings-header-msg-label',
 			],
 			'wikis' => [
 				'type' => 'textarea',
-				'label' => 'Wikis (one per line, hostnames)',
+				'label-message' => 'mca-settings-wikis-label',
 			],
 		];
 
@@ -120,6 +129,103 @@ class SpecialCentralAuthSettings extends SpecialPage {
 			if ( $wiki ) {
 				$insertWikis[] = [
 					'mfw_farm_id' => $data['id'],
+					'mfw_wiki_id' => strtolower( $wiki ),
+				];
+			}
+		}
+
+		if ( $insertWikis ) {
+			$dbw->insert( 'mca_farm_wikis', $insertWikis, __METHOD__, [ 'IGNORE' ] );
+		}
+
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+		return true;
+	}
+
+	private function showEditForm() {
+		$id = $this->getRequest()->getText( 'id' );
+		$dbr = $this->dbProvider->getReplicaDatabase();
+		$farm = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_farms' )
+			->where( [ 'mf_id' => $id ] )
+			->fetchRow();
+
+		if ( !$farm ) {
+			$this->getOutput()->redirect( $this->getPageTitle()->getFullURL() );
+			return;
+		}
+
+		$wikis = $dbr->newSelectQueryBuilder()
+			->select( 'mfw_wiki_id' )
+			->from( 'mca_farm_wikis' )
+			->where( [ 'mfw_farm_id' => $id ] )
+			->fetchFieldValues();
+
+		$formDescriptor = [
+			'id' => [
+				'type' => 'info',
+				'label-message' => 'mca-settings-farm-id',
+				'default' => $id,
+			],
+			'hidden_id' => [
+				'type' => 'hidden',
+				'name' => 'id',
+				'default' => $id,
+			],
+			'name' => [
+				'type' => 'text',
+				'label-message' => 'mca-settings-display-name',
+				'default' => $farm->mf_display_name,
+				'required' => true,
+			],
+			'api_url' => [
+				'type' => 'text',
+				'label-message' => 'mca-settings-api-url-label',
+				'default' => $farm->mf_api_url,
+			],
+			'is_centralauth' => [
+				'type' => 'check',
+				'label-message' => 'mca-settings-centralauth-label',
+				'default' => (bool)$farm->mf_is_centralauth,
+			],
+			'header_msg' => [
+				'type' => 'text',
+				'label-message' => 'mca-settings-header-msg-label',
+				'default' => $farm->mf_header_msg,
+			],
+			'wikis' => [
+				'type' => 'textarea',
+				'label-message' => 'mca-settings-wikis-label',
+				'default' => implode( "\n", $wikis ),
+			],
+		];
+
+		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
+		$htmlForm->setSubmitCallback( [ $this, 'onEditSubmit' ] );
+		$htmlForm->setSubmitTextMsg( 'mca-settings-edit' );
+		$htmlForm->show();
+	}
+
+	public function onEditSubmit( array $data ) {
+		$id = $data['id'];
+		$dbw = $this->dbProvider->getPrimaryDatabase();
+		$dbw->update( 'mca_farms', [
+			'mf_display_name' => $data['name'],
+			'mf_api_url' => $data['api_url'],
+			'mf_is_centralauth' => $data['is_centralauth'],
+			'mf_header_msg' => $data['header_msg'],
+		], [ 'mf_id' => $id ], __METHOD__ );
+
+		$dbw->delete( 'mca_farm_wikis', [ 'mfw_farm_id' => $id ], __METHOD__ );
+
+		$wikis = explode( "\n", str_replace( "\r", "", $data['wikis'] ) );
+		$insertWikis = [];
+		foreach ( $wikis as $wiki ) {
+			$wiki = trim( $wiki );
+			if ( $wiki ) {
+				$insertWikis[] = [
+					'mfw_farm_id' => $id,
 					'mfw_wiki_id' => strtolower( $wiki ),
 				];
 			}

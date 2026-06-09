@@ -190,7 +190,8 @@ class ExternalCAProvider {
 	}
 
 	public function fetchUserMetadata( string $hostname, string $username ): ?array {
-		$url = "https://$hostname/w/api.php?" . http_build_query( [
+		$paths = [ '/w/api.php', '/api.php' ];
+		$query = '?' . http_build_query( [
 			'action' => 'query',
 			'list' => 'users',
 			'ususers' => $username,
@@ -199,14 +200,20 @@ class ExternalCAProvider {
 			'formatversion' => 2,
 		] );
 
-		$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
-		$status = $request->execute();
-
-		if ( !$status->isOK() ) {
-			return null;
+		$data = null;
+		foreach ( $paths as $path ) {
+			$url = "https://$hostname$path$query";
+			$request = $this->requestFactory->create( $url, [ 'method' => 'GET' ], __METHOD__ );
+			$status = $request->execute();
+			if ( $status->isOK() ) {
+				$data = json_decode( $request->getContent(), true );
+				break;
+			}
 		}
 
-		$data = json_decode( $request->getContent(), true );
+		if ( !$data ) {
+			return null;
+		}
 		$user = $data['query']['users'][0] ?? null;
 
 		if ( !$user || isset( $user['missing'] ) || isset( $user['invalid'] ) ) {
