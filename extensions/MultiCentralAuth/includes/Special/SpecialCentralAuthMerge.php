@@ -138,11 +138,18 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			'meu_external_username' => $externalUser,
 		], __METHOD__ );
 
-		// Clear manual attachments for this farm as they are now redundant
-		$wikis = $this->externalCAProvider->getLocalAttachedWikis( $userId, true );
-		foreach ( $wikis as $wiki ) {
+		// Clear manual attachments and suppressed wikis for this farm as they are now redundant
+		$manualWikis = $this->externalCAProvider->getLocalAttachedWikis( $userId, true );
+		foreach ( $manualWikis as $wiki ) {
 			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === $farmId ) {
 				$dbw->delete( 'mca_local_attachments', [ 'mla_user_id' => $userId, 'mla_wiki_id' => $wiki ], __METHOD__ );
+			}
+		}
+
+		$suppressedWikis = $this->externalCAProvider->getSuppressedWikis( $userId, true );
+		foreach ( $suppressedWikis as $wiki ) {
+			if ( $this->externalCAProvider->categorizeWiki( $wiki ) === $farmId ) {
+				$dbw->delete( 'mca_suppressed_wikis', [ 'msw_user_id' => $userId, 'msw_wiki_id' => $wiki ], __METHOD__ );
 			}
 		}
 	}
