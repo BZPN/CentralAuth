@@ -169,10 +169,10 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 				], 'View' ) : '';
 		}
 
-		$html = Html::openElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded' ] );
+		$html = Html::openElement( 'div', [ 'class' => 'mw-htmlform-ooui-wrapper oo-ui-panelLayout-framed oo-ui-panelLayout-padded', 'style' => 'margin-bottom: 1em;' ] );
 		$html .= Html::element( 'h2', [ 'class' => 'mca-box-header' ], $this->msg( 'mca-request-details-title' )->text() );
 
-		$html .= Html::openElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group' ] );
+		$html .= Html::openElement( 'div', [ 'class' => 'oo-ui-fieldsetLayout-group', 'style' => 'padding: 1em;' ] );
 		foreach ( $fields as $label => $val ) {
 			$html .= Html::rawElement( 'div', [ 'class' => 'oo-ui-layout oo-ui-fieldLayout oo-ui-fieldLayout-align-top' ],
 				Html::rawElement( 'div', [ 'class' => 'oo-ui-fieldLayout-body' ],
