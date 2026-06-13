@@ -166,7 +166,6 @@
 	"mca-lock-expiry-2years": "2 years",
 	"mca-lock-reason": "Reason:",
 	"mca-lock-unmerge": "Unmerge all CentralAuth accounts",
-	"mca-lock-blockips": "Block all IP addresses used by this user indefinitely",
 	"mca-lock-success": "CentralAuth account locked for $1.",
 	"mca-unlock-success": "CentralAuth account unlocked for $1.",
 	"mca-lock-reason-dropdown": "* Common lock reasons\n** Vandalism-only account\n** Cross-wiki vandalism\n** Spambot\n** Compromised account\n** Long-term abuse\n** Security reasons",

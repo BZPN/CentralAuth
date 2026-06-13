@@ -62,7 +62,16 @@ class SpecialUnlockCAAccount extends SpecialPage {
 		$htmlForm->setSubmitDestructive( false );
 		$htmlForm->prepareForm();
 
-		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( false ), 'unlockcaaccount', 'mca-header-type-view' ) );
+		$status = $htmlForm->tryAuthorizedSubmit();
+		if ( $status === true || ( $status instanceof \StatusValue && $status->isGood() ) ) {
+			return;
+		}
+
+		if ( $this->getRequest()->getVal( 'success' ) ) {
+			$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unlock-success', $this->getRequest()->getVal( 'success' ) )->parse() ) );
+		}
+
+		$this->getOutput()->addHTML( $this->getFramedFieldsetLayout( $htmlForm->getHTML( $status ), 'unlockcaaccount', 'mca-header-type-view' ) );
 	}
 
 	public function onSubmit( array $formData ) {
@@ -77,7 +86,7 @@ class SpecialUnlockCAAccount extends SpecialPage {
 			->fetchRow();
 
 		if ( !$userRow ) {
-			return [ 'mca-error-user-not-found' ];
+			return \Status::newFatal( 'mca-error-user-not-found' );
 		}
 
 		$dbw->delete(
@@ -97,7 +106,7 @@ class SpecialUnlockCAAccount extends SpecialPage {
 			$logEntry->publish( $logId );
 		}
 
-		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unlock-success', $targetName )->parse() ) );
+		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'success' => $targetName ] ) );
 		return true;
 	}
 
