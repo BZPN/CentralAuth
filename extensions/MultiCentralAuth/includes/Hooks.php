@@ -98,100 +98,6 @@ class Hooks {
 		] );
 	}
 
-	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
-		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
-		$dbr = $dbProvider->getReplicaDatabase();
-
-		$userId = $user->getId();
-		if ( $userId <= 0 ) {
-			$userId = $dbr->newSelectQueryBuilder()
-				->select( 'user_id' )
-				->from( 'user' )
-				->where( [ 'user_name' => $user->getName() ] )
-				->fetchField();
-		}
-
-		if ( !$userId ) {
-			return;
-		}
-
-		$lock = $dbr->newSelectQueryBuilder()
-			->select( [ 'mcl_reason', 'mcl_expiry' ] )
-			->from( 'mca_locks' )
-			->where( [ 'mcl_user_id' => $userId ] )
-			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
-			->fetchRow();
-
-		if ( $lock ) {
-			$expiry = $lock->mcl_expiry;
-			$context = \MediaWiki\Context\RequestContext::getMain();
-			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
-				$context->getLanguage()->getCode()
-			);
-			if ( $expiry === 'infinity' ) {
-				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
-			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
-			}
-
-			if ( is_object( $canLogin ) && method_exists( $canLogin, 'fatal' ) ) {
-				$canLogin->fatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
-			} else {
-				$canLogin = \Status::newFatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
-			}
-			return false;
-		}
-	}
-
-	/**
-	 * @param $user
-	 * @param $authRequests
-	 * @param \Status $status
-	 * @return bool
-	 */
-	public static function onUserCanLogin( $user, $authRequests, $status ) {
-		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
-		$dbr = $dbProvider->getReplicaDatabase();
-
-		$userId = $user->getId();
-		if ( $userId <= 0 ) {
-			$userId = $dbr->newSelectQueryBuilder()
-				->select( 'user_id' )
-				->from( 'user' )
-				->where( [ 'user_name' => $user->getName() ] )
-				->fetchField();
-		}
-
-		if ( !$userId ) {
-			return true;
-		}
-
-		$lock = $dbr->newSelectQueryBuilder()
-			->select( [ 'mcl_reason', 'mcl_expiry' ] )
-			->from( 'mca_locks' )
-			->where( [ 'mcl_user_id' => $userId ] )
-			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
-			->fetchRow();
-
-		if ( $lock ) {
-			$expiry = $lock->mcl_expiry;
-			$context = \MediaWiki\Context\RequestContext::getMain();
-			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
-				$context->getLanguage()->getCode()
-			);
-			if ( $expiry === 'infinity' ) {
-				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
-			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
-			}
-
-			$status->fatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
-			return false;
-		}
-
-		return true;
-	}
-
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {
 		// $user can be a Title or a User object depending on version
 		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
@@ -208,7 +114,9 @@ class Hooks {
 			->select( '*' )
 			->from( 'mca_locks' )
 			->where( [ 'mcl_user_id' => $targetUser->getId() ] )
-			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->andWhere( $dbr->expr( 'mcl_expiry', '>', $dbr->timestamp() )
+				->or( 'mcl_expiry', '=', 'infinity' )
+			)
 			->fetchRow();
 
 		if ( $lock ) {
