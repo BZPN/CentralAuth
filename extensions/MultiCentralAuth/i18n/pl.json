@@ -39,7 +39,7 @@
 	"centralauth-merge-method-password": "hasło",
 	"centralauth-merge-method-password-desc": "Konto zostało połączone przy użyciu hasła.",
 	"centralauth-merge-method-mail": "e-mail",
-	"centralauth-merge-method-mail-desc": "Konto zostało połączone przy użyciu potwierdzia e-mail.",
+	"centralauth-merge-method-mail-desc": "Konto zostało połączone przy użyciu potwierzia e-mail.",
 	"centralauth-merge-method-admin": "administrator",
 	"centralauth-merge-method-admin-desc": "Konto zostało połączone przez administratora.",
 	"centralauth-merge-method-login": "logowanie",
