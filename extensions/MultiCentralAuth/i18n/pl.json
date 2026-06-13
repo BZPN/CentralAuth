@@ -142,7 +142,7 @@
 	"mca-lock-notice-header": "To konto CentralAuth zostało zablokowane. Poniżej znajduje się ostatni wpis z rejestru blokad w celach informacyjnych:",
 	"mca-view-full-log": "Zobacz pełny rejestr",
 	"mca-global-block-notice": "Ten użytkownik został '''zablokowany globalnie''' przez $1. Wygasa: $2. Powód: $3. Zablokowano: $4.",
-	"mca-lock-blocked-login": "Twoje konto CentralAuth jest '''zablokowane'''.\nPowód: $1\nWygasa: $2",
+	"centralauth-lock-message": "Twoje konto CentralAuth jest '''zablokowane'''.\nPowód: $1\nWygasa: $2",
 	"mca-global-account-info": "informacje o globalnych kontach",
 	"ago-minutes": "$1 {{PLURAL:$1|minutę|minuty|minut}} temu",
 	"ago-hours": "$1 {{PLURAL:$1|godzinę|godziny|godzin}} temu",
