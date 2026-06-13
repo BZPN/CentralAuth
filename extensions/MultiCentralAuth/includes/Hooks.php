@@ -99,7 +99,9 @@ class Hooks {
 	}
 
 	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
-		// $user is UserIdentity here.
+		// This hook can be called with different signatures in different MW versions.
+		// In MW 1.35+, the third parameter is usually a StatusValue or Status object.
+		// However, some versions pass it by reference.
 		if ( !$user->isRegistered() ) {
 			return;
 		}
@@ -131,6 +133,46 @@ class Hooks {
 		}
 	}
 
+	/**
+	 * @param $user
+	 * @param $authRequests
+	 * @param \Status $status
+	 * @return bool
+	 */
+	public static function onUserCanLogin( $user, $authRequests, $status ) {
+		if ( !$user->isRegistered() ) {
+			return true;
+		}
+
+		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
+		$dbr = $dbProvider->getReplicaDatabase();
+
+		$lock = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_locks' )
+			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->fetchRow();
+
+		if ( $lock ) {
+			$expiry = $lock->mcl_expiry;
+			$context = \MediaWiki\Context\RequestContext::getMain();
+			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
+				$context->getLanguage()->getCode()
+			);
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
+			} else {
+				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
+			}
+
+			$status->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			return false;
+		}
+
+		return true;
+	}
+
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {
 		// $user can be a Title or a User object depending on version
 		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
@@ -152,34 +194,50 @@ class Hooks {
 
 		if ( $lock ) {
 			$out = $sp->getOutput();
-			$performer = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromId( $lock->mcl_by );
-			if ( $performer && $performer->isRegistered() ) {
-				$blockerLink = Html::element( 'a', [
-					'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth', $performer->getName() )->getFullURL(),
-				], $performer->getName() );
-			} else {
-				$blockerLink = $lock->mcl_by;
+			$out->addModuleStyles( [ 'oojs-ui.styles.icons-moderation', 'ext.multicentralauth.styles' ] );
+			$out->addModules( 'oojs-ui-core' );
+
+			$dbr = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+			$logRow = $dbr->newSelectQueryBuilder()
+				->select( [ 'log_id', 'log_timestamp', 'log_user', 'log_user_text', 'log_params', 'log_comment' ] )
+				->from( 'logging' )
+				->where( [
+					'log_type' => 'mca-lock-log',
+					'log_action' => 'lock',
+					'log_namespace' => NS_USER,
+					'log_title' => $targetUser->getUserPage()->getDBkey()
+				] )
+				->orderBy( 'log_timestamp', 'DESC' )
+				->fetchRow();
+
+			$msg = wfMessage( 'mca-lock-notice-header' )->parse();
+			$logEntryHtml = '';
+
+			if ( $logRow ) {
+				$formatter = \MediaWiki\Logging\LogFormatter::newFromRow( $logRow );
+				$formatter->setContext( $sp->getContext() );
+				$logEntryHtml = Html::rawElement( 'ul', [],
+					Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+				);
 			}
 
-			$expiry = $lock->mcl_expiry;
-			$lang = $out->getLanguage();
-			if ( $expiry === 'infinity' ) {
-				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
-			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry, $out->getUser() );
-			}
-			$reason = $lock->mcl_reason;
-			$timestamp = $lang->userTimeAndDate( $lock->mcl_timestamp, $out->getUser() );
+			$logLink = \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [
+				'page' => $targetUser->getUserPage()->getPrefixedText()
+			] );
 
-			$msg = wfMessage( 'mca-global-lock-notice' )
-				->rawParams( $blockerLink )
-				->params( $formattedExpiry, $reason, $timestamp )
-				->parse();
+			$button = new \OOUI\ButtonWidget( [
+				'label' => wfMessage( 'mca-view-full-log' )->text(),
+				'href' => $logLink,
+				'flags' => [ 'progressive' ]
+			] );
 
-			$out->addModuleStyles( 'oojs-ui.styles.icons-moderation' );
-			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error mca-global-lock-notice-box' ],
-				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-lock' ] ) .
-				Html::rawElement( 'div', [], $msg )
+			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
+				Html::rawElement( 'div', [],
+					Html::rawElement( 'div', [], $msg ) .
+					$logEntryHtml .
+					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $button )
+				)
 			) );
 		}
 	}

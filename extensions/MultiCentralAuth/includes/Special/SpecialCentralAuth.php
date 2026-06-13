@@ -474,33 +474,49 @@ class SpecialCentralAuth extends SpecialPage {
 			->fetchRow();
 
 		if ( $lock ) {
-			$performer = $this->userFactory->newFromId( $lock->mcl_by );
-			if ( $performer && $performer->isRegistered() ) {
-				$blockerLink = Html::element( 'a', [
-					'href' => SpecialPage::getTitleFor( 'CentralAuth', $performer->getName() )->getFullURL(),
-				], $performer->getName() );
-			} else {
-				$blockerLink = $lock->mcl_by;
+			$this->getOutput()->addModuleStyles( [ 'oojs-ui.styles.icons-moderation', 'ext.multicentralauth.styles' ] );
+			$this->getOutput()->addModules( 'oojs-ui-core' );
+
+			$logRow = $dbr->newSelectQueryBuilder()
+				->select( [ 'log_id', 'log_timestamp', 'log_user', 'log_user_text', 'log_params', 'log_comment' ] )
+				->from( 'logging' )
+				->where( [
+					'log_type' => 'mca-lock-log',
+					'log_action' => 'lock',
+					'log_namespace' => NS_USER,
+					'log_title' => $user->getUserPage()->getDBkey()
+				] )
+				->orderBy( 'log_timestamp', 'DESC' )
+				->fetchRow();
+
+			$msg = $this->msg( 'mca-lock-notice-header' )->parse();
+			$logEntryHtml = '';
+
+			if ( $logRow ) {
+				$formatter = \MediaWiki\Logging\LogFormatter::newFromRow( $logRow );
+				$formatter->setContext( $this->getContext() );
+				$logEntryHtml = Html::rawElement( 'ul', [],
+					Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+				);
 			}
 
-			$expiry = $lock->mcl_expiry;
-			if ( $expiry === 'infinity' ) {
-				$formattedExpiry = $this->msg( 'infiniteblock' )->text();
-			} else {
-				$formattedExpiry = $this->getLanguage()->userTimeAndDate( $expiry, $this->getUser() );
-			}
-			$reason = $lock->mcl_reason;
-			$timestamp = $this->getLanguage()->userTimeAndDate( $lock->mcl_timestamp, $this->getUser() );
+			$logLink = SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [
+				'page' => $user->getUserPage()->getPrefixedText()
+			] );
 
-			$msg = $this->msg( 'mca-global-lock-notice' )
-				->rawParams( $blockerLink )
-				->params( $formattedExpiry, $reason, $timestamp )
-				->parse();
+			$button = new \OOUI\ButtonWidget( [
+				'label' => $this->msg( 'mca-view-full-log' )->text(),
+				'href' => $logLink,
+				'flags' => [ 'progressive' ]
+			] );
 
-			$this->getOutput()->addModuleStyles( 'oojs-ui.styles.icons-moderation' );
-			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error mca-global-lock-notice-box' ],
-				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-lock' ] ) .
-				Html::rawElement( 'div', [], $msg )
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
+				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
+				Html::rawElement( 'div', [],
+					Html::rawElement( 'div', [], $msg ) .
+					$logEntryHtml .
+					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $button )
+				)
 			) );
 		}
 	}
