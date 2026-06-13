@@ -54,7 +54,9 @@ class MCAPreAuthenticationProvider extends AbstractPreAuthenticationProvider {
 			}
 
 			return \StatusValue::newFatal(
-				wfMessage( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry )
+				new \RawMessage( '$1', [
+					wfMessage( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry )->parse()
+				] )
 			);
 		}
 
