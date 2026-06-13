@@ -4,20 +4,19 @@ namespace MediaWiki\Extension\MultiCentralAuth;
 
 use MediaWiki\Auth\AbstractPreAuthenticationProvider;
 use MediaWiki\Auth\AuthenticationRequest;
-use MediaWiki\Auth\AuthenticationResponse;
 use MediaWiki\MediaWikiServices;
 
 class MCAPreAuthenticationProvider extends AbstractPreAuthenticationProvider {
 
 	/**
 	 * @param array $reqs
-	 * @return AuthenticationResponse
+	 * @return \StatusValue
 	 */
 	public function testForAuthentication( array $reqs ) {
 		$username = AuthenticationRequest::getUsernameFromRequests( $reqs );
 
 		if ( $username === null ) {
-			return AuthenticationResponse::newAbstain();
+			return \StatusValue::newGood();
 		}
 
 		$dbProvider = MediaWikiServices::getInstance()->getConnectionProvider();
@@ -30,7 +29,7 @@ class MCAPreAuthenticationProvider extends AbstractPreAuthenticationProvider {
 			->fetchField();
 
 		if ( !$userId ) {
-			return AuthenticationResponse::newAbstain();
+			return \StatusValue::newGood();
 		}
 
 		$lock = $dbr->newSelectQueryBuilder()
@@ -54,11 +53,11 @@ class MCAPreAuthenticationProvider extends AbstractPreAuthenticationProvider {
 				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
 			}
 
-			return AuthenticationResponse::newFail(
+			return \StatusValue::newFatal(
 				wfMessage( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry )
 			);
 		}
 
-		return AuthenticationResponse::newAbstain();
+		return \StatusValue::newGood();
 	}
 }
