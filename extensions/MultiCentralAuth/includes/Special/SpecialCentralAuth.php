@@ -493,7 +493,7 @@ class SpecialCentralAuth extends SpecialPage {
 			$logEntryHtml = '';
 
 			if ( $logId ) {
-				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId );
+				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId, $dbr );
 				if ( $logEntry ) {
 					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
 					$formatter->setContext( $this->getContext() );

@@ -245,7 +245,7 @@ class Hooks {
 			$logEntryHtml = '';
 
 			if ( $logId ) {
-				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId );
+				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId, $dbr );
 				if ( $logEntry ) {
 					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
 					$formatter->setContext( $sp->getContext() );
