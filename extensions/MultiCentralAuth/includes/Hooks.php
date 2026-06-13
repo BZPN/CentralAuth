@@ -126,12 +126,12 @@ class Hooks {
 				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
 			}
 
-			$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			$canLogin->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
 			return false;
 		}
 	}
 
-	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $out ) {
+	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {
 		// $user can be a Title or a User object depending on version
 		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
 		$targetUser = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromName( $targetName );
@@ -151,6 +151,7 @@ class Hooks {
 			->fetchRow();
 
 		if ( $lock ) {
+			$out = $sp->getOutput();
 			$performer = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newFromId( $lock->mcl_by );
 			if ( $performer && $performer->isRegistered() ) {
 				$blockerLink = Html::element( 'a', [

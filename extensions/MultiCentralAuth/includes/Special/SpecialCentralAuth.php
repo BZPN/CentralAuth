@@ -498,7 +498,7 @@ class SpecialCentralAuth extends SpecialPage {
 				->parse();
 
 			$this->getOutput()->addModuleStyles( 'oojs-ui.styles.icons-moderation' );
-			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-warning mca-global-lock-notice-box' ],
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-error mca-global-lock-notice-box' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-lock' ] ) .
 				Html::rawElement( 'div', [], $msg )
 			) );

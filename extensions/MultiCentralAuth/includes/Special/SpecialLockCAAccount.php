@@ -94,12 +94,6 @@ class SpecialLockCAAccount extends SpecialPage {
 				'label-message' => 'mca-lock-unmerge',
 				'default' => false,
 			],
-			'blockips' => [
-				'type' => 'check',
-				'name' => 'blockips',
-				'label-message' => 'mca-lock-blockips',
-				'default' => false,
-			],
 		];
 
 		$htmlForm = HTMLForm::factory( 'ooui', $formDescriptor, $this->getContext() );
@@ -122,12 +116,14 @@ class SpecialLockCAAccount extends SpecialPage {
 		$reason = $formData['reason'];
 
 		if ( is_array( $reason ) ) {
-			$selected = $reason[0] ?? '';
-			$other = $reason[1] ?? '';
+			// In some MediaWiki/OOUI versions, the indices for SelectAndOther might be swapped.
+			// Based on user report, [0] is the typed text and [1] is the selected value.
+			$other = $reason[0] ?? '';
+			$selected = $reason[1] ?? '';
 			if ( $selected === 'other' || $selected === '' ) {
 				$reason = $other;
 			} else {
-				if ( $other !== '' && $other !== $selected ) {
+				if ( $other !== '' ) {
 					$reason = $selected . ': ' . $other;
 				} else {
 					$reason = $selected;
@@ -140,7 +136,6 @@ class SpecialLockCAAccount extends SpecialPage {
 		}
 
 		$unmerge = $formData['unmerge'];
-		$blockips = $formData['blockips'];
 
 		$user = $this->userFactory->newFromName( $targetName );
 		if ( !$user || !$user->isRegistered() ) {
@@ -201,10 +196,6 @@ class SpecialLockCAAccount extends SpecialPage {
 			}
 		}
 
-		if ( $blockips ) {
-			$this->blockUserIPs( $user, $reason );
-		}
-
 		// Log action
 		$logEntry = new \ManualLogEntry( 'mca-lock-log', 'lock' );
 		$logEntry->setPerformer( $this->getUser() );
@@ -218,32 +209,6 @@ class SpecialLockCAAccount extends SpecialPage {
 
 		$this->getOutput()->redirect( $this->getPageTitle()->getFullURL( [ 'success' => $targetName ] ) );
 		return true;
-	}
-
-	private function blockUserIPs( $user, $reason ) {
-		$dbr = $this->dbProvider->getReplicaDatabase();
-		$res = $dbr->newSelectQueryBuilder()
-			->select( 'rc_ip' )
-			->from( 'recentchanges' )
-			->where( [ 'rc_user' => $user->getId() ] )
-			->groupBy( 'rc_ip' )
-			->fetchResultSet();
-
-		foreach ( $res as $row ) {
-			$ip = $row->rc_ip;
-			if ( !$ip ) continue;
-
-			$block = new DatabaseBlock( [
-				'address' => $ip,
-				'by' => $this->getUser()->getId(),
-				'reason' => $reason,
-				'expiry' => 'infinity',
-				'isHardblock' => true,
-				'isCreateAccountBlocked' => true,
-			] );
-
-			$this->blockManager->placeBlock( $block );
-		}
 	}
 
 	private function getFramedFieldsetLayout( $html, $legendMsg, $headerClass = '' ): string {
