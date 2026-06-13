@@ -115,21 +115,33 @@ input[name="delete_selected"] {
 
 .mca-global-lock-notice-box-green {
 	background-color: #d5fdf4 !important;
-	border-color: #14866d !important;
-	color: #000;
+	border: 1px solid #14866d !important;
+	color: #000 !important;
+	padding: 12px 12px 12px 48px !important;
+	position: relative !important;
+	min-height: 24px !important;
+	margin-bottom: 1em !important;
+	display: block !important;
 
 	.mw-message-box-icon {
-		&.oo-ui-icon-error {
-			background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path d="M13.728 1H6.272L1 6.272v7.456L6.272 19h7.456L19 13.728V6.272ZM11 15H9v-2h2v2zm0-4H9V5h2z" fill="%2314866d"/></svg>');
-		}
+		position: absolute !important;
+		left: 12px !important;
+		top: 12px !important;
+		width: 24px !important;
+		height: 24px !important;
+		display: block !important;
+		background-size: contain !important;
+		background-repeat: no-repeat !important;
+		background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path d="M13.728 1H6.272L1 6.272v7.456L6.272 19h7.456L19 13.728V6.272ZM11 15H9v-2h2v2zm0-4H9V5h2z" fill="%2314866d"/></svg>') !important;
 	}
 
 	ul {
-		margin: 0.5em 0 0.5em 1.5em;
+		margin: 0.5em 0 0.5em 1.5em !important;
 	}
 
 	.mw-message-box-content {
-		margin-left: 0; // Reset if needed, but standard MW box should handle it
+		margin-left: 0 !important;
+		display: block !important;
 	}
 }
 

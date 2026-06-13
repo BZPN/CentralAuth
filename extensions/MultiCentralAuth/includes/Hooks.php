@@ -102,11 +102,23 @@ class Hooks {
 		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
 		$dbr = $dbProvider->getReplicaDatabase();
 
+		$userId = $user->getId();
+		if ( $userId <= 0 ) {
+			$userId = $dbr->newSelectQueryBuilder()
+				->select( 'user_id' )
+				->from( 'user' )
+				->where( [ 'user_name' => $user->getName() ] )
+				->fetchField();
+		}
+
+		if ( !$userId ) {
+			return;
+		}
+
 		$lock = $dbr->newSelectQueryBuilder()
 			->select( [ 'mcl_reason', 'mcl_expiry' ] )
 			->from( 'mca_locks' )
-			->join( 'user', null, 'mcl_user_id = user_id' )
-			->where( [ 'user_name' => $user->getName() ] )
+			->where( [ 'mcl_user_id' => $userId ] )
 			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
 			->fetchRow();
 
@@ -141,11 +153,23 @@ class Hooks {
 		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
 		$dbr = $dbProvider->getReplicaDatabase();
 
+		$userId = $user->getId();
+		if ( $userId <= 0 ) {
+			$userId = $dbr->newSelectQueryBuilder()
+				->select( 'user_id' )
+				->from( 'user' )
+				->where( [ 'user_name' => $user->getName() ] )
+				->fetchField();
+		}
+
+		if ( !$userId ) {
+			return true;
+		}
+
 		$lock = $dbr->newSelectQueryBuilder()
 			->select( [ 'mcl_reason', 'mcl_expiry' ] )
 			->from( 'mca_locks' )
-			->join( 'user', null, 'mcl_user_id = user_id' )
-			->where( [ 'user_name' => $user->getName() ] )
+			->where( [ 'mcl_user_id' => $userId ] )
 			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
 			->fetchRow();
 
@@ -216,8 +240,15 @@ class Hooks {
 				if ( $logEntry ) {
 					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
 					$formatter->setContext( $sp->getContext() );
+					$lang = $sp->getLanguage();
+					$tsLink = Html::element( 'a', [
+						'href' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [
+							'logid' => $logId
+						] )
+					], $lang->userTimeAndDate( $logEntry->getTimestamp(), $sp->getUser() ) );
+
 					$logEntryHtml = Html::rawElement( 'ul', [],
-						Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+						Html::rawElement( 'li', [], $tsLink . ' ' . $formatter->getActionText() . ' ' . $formatter->getComment() )
 					);
 				}
 			}

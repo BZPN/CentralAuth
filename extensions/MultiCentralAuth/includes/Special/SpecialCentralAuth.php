@@ -500,8 +500,15 @@ class SpecialCentralAuth extends SpecialPage {
 				if ( $logEntry ) {
 					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
 					$formatter->setContext( $this->getContext() );
+					$lang = $this->getLanguage();
+					$tsLink = Html::element( 'a', [
+						'href' => SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [
+							'logid' => $logId
+						] )
+					], $lang->userTimeAndDate( $logEntry->getTimestamp(), $this->getUser() ) );
+
 					$logEntryHtml = Html::rawElement( 'ul', [],
-						Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+						Html::rawElement( 'li', [], $tsLink . ' ' . $formatter->getActionText() . ' ' . $formatter->getComment() )
 					);
 				}
 			}
