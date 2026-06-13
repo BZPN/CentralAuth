@@ -174,8 +174,6 @@
 		"ContributionsToolLinks": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onContributionsToolLinks",
 		"MCAMergeRequestSubmitted": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestSubmitted",
 		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
-		"CheckCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onCheckCanLogin",
-		"UserCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onUserCanLogin",
 		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput"
 	},
 	"EchoNotifications": {
@@ -209,6 +207,14 @@
 	"EchoNotificationIcons": {
 		"mca-icon": {
 			"path": "MultiCentralAuth/resources/icons/merged-primary.png"
+		}
+	},
+	"AuthManagerAutoConfig": {
+		"preauth": {
+			"MCAPreAuthenticationProvider": {
+				"class": "MediaWiki\\Extension\\MultiCentralAuth\\MCAPreAuthenticationProvider",
+				"sort": 10
+			}
 		}
 	},
 	"DefaultUserOptions": {
