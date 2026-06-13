@@ -173,6 +173,37 @@ class Hooks {
 		return true;
 	}
 
+	public static function onAuthManagerLoginAuthenticateAudit( $status, $user, $authRequests, $authBackends ) {
+		if ( !$user || !$user->isRegistered() ) {
+			return;
+		}
+
+		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
+		$dbr = $dbProvider->getReplicaDatabase();
+
+		$lock = $dbr->newSelectQueryBuilder()
+			->select( '*' )
+			->from( 'mca_locks' )
+			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
+			->fetchRow();
+
+		if ( $lock ) {
+			$expiry = $lock->mcl_expiry;
+			$context = \MediaWiki\Context\RequestContext::getMain();
+			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
+				$context->getLanguage()->getCode()
+			);
+			if ( $expiry === 'infinity' ) {
+				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
+			} else {
+				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
+			}
+
+			$status->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+		}
+	}
+
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {
 		// $user can be a Title or a User object depending on version
 		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
@@ -198,8 +229,8 @@ class Hooks {
 			$out->addModules( 'oojs-ui-core' );
 
 			$dbr = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
-			$logRow = $dbr->newSelectQueryBuilder()
-				->select( [ 'log_id', 'log_timestamp', 'log_user', 'log_user_text', 'log_params', 'log_comment' ] )
+			$logId = $dbr->newSelectQueryBuilder()
+				->select( 'log_id' )
 				->from( 'logging' )
 				->where( [
 					'log_type' => 'mca-lock-log',
@@ -208,17 +239,20 @@ class Hooks {
 					'log_title' => $targetUser->getUserPage()->getDBkey()
 				] )
 				->orderBy( 'log_timestamp', 'DESC' )
-				->fetchRow();
+				->fetchField();
 
 			$msg = wfMessage( 'mca-lock-notice-header' )->parse();
 			$logEntryHtml = '';
 
-			if ( $logRow ) {
-				$formatter = \MediaWiki\Logging\LogFormatter::newFromRow( $logRow );
-				$formatter->setContext( $sp->getContext() );
-				$logEntryHtml = Html::rawElement( 'ul', [],
-					Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
-				);
+			if ( $logId ) {
+				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId );
+				if ( $logEntry ) {
+					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
+					$formatter->setContext( $sp->getContext() );
+					$logEntryHtml = Html::rawElement( 'ul', [],
+						Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+					);
+				}
 			}
 
 			$logLink = \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [

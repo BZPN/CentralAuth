@@ -477,8 +477,8 @@ class SpecialCentralAuth extends SpecialPage {
 			$this->getOutput()->addModuleStyles( [ 'oojs-ui.styles.icons-moderation', 'ext.multicentralauth.styles' ] );
 			$this->getOutput()->addModules( 'oojs-ui-core' );
 
-			$logRow = $dbr->newSelectQueryBuilder()
-				->select( [ 'log_id', 'log_timestamp', 'log_user', 'log_user_text', 'log_params', 'log_comment' ] )
+			$logId = $dbr->newSelectQueryBuilder()
+				->select( 'log_id' )
 				->from( 'logging' )
 				->where( [
 					'log_type' => 'mca-lock-log',
@@ -487,17 +487,20 @@ class SpecialCentralAuth extends SpecialPage {
 					'log_title' => $user->getUserPage()->getDBkey()
 				] )
 				->orderBy( 'log_timestamp', 'DESC' )
-				->fetchRow();
+				->fetchField();
 
 			$msg = $this->msg( 'mca-lock-notice-header' )->parse();
 			$logEntryHtml = '';
 
-			if ( $logRow ) {
-				$formatter = \MediaWiki\Logging\LogFormatter::newFromRow( $logRow );
-				$formatter->setContext( $this->getContext() );
-				$logEntryHtml = Html::rawElement( 'ul', [],
-					Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
-				);
+			if ( $logId ) {
+				$logEntry = \MediaWiki\Logging\DatabaseLogEntry::newFromId( $logId );
+				if ( $logEntry ) {
+					$formatter = \MediaWiki\Logging\LogFormatter::newFromEntry( $logEntry );
+					$formatter->setContext( $this->getContext() );
+					$logEntryHtml = Html::rawElement( 'ul', [],
+						Html::rawElement( 'li', [], $formatter->getActionText() . ' ' . $formatter->getComment() )
+					);
+				}
 			}
 
 			$logLink = SpecialPage::getTitleFor( 'Log', 'mca-lock-log' )->getFullURL( [
