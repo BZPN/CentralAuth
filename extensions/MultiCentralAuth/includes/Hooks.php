@@ -126,9 +126,9 @@ class Hooks {
 			}
 
 			if ( is_object( $canLogin ) && method_exists( $canLogin, 'fatal' ) ) {
-				$canLogin->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+				$canLogin->fatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
 			} else {
-				$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+				$canLogin = \Status::newFatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
 			}
 			return false;
 		}
@@ -167,7 +167,7 @@ class Hooks {
 				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
 			}
 
-			$status->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			$status->fatal( 'centralauth-lock-message', $lock->mcl_reason, $formattedExpiry );
 			return false;
 		}
 

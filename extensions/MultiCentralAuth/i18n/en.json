@@ -155,7 +155,7 @@
 	"mca-lock-notice-header": "This CentralAuth account has been locked. The latest active block log entry is provided below for reference:",
 	"mca-view-full-log": "View full log",
 	"mca-global-lock-notice": "This CentralAuth account has been locked by $1. Expiry: $2. Reason: $3. Locked on: $4. [[Special:Log/mca-lock-log|View log]].",
-	"mca-lock-blocked-login": "Your CentralAuth account is locked.\nReason: $1\nExpiry: $2",
+	"centralauth-lock-message": "Your CentralAuth account is locked.\nReason: $1\nExpiry: $2",
 	"mca-lock-expiry": "Expiry:",
 	"mca-lock-expiry-1hour": "1 hour",
 	"mca-lock-expiry-2hours": "2 hours",
