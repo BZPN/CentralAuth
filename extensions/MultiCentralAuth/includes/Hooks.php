@@ -28,8 +28,22 @@ class Hooks {
 		], wfMessage( 'mca-global-account-info' )->text() );
 	}
 
+	public static function onEchoGetDefaultNotifiedUsers( $event, &$users ) {
+		$extra = $event->getExtra();
+		if ( isset( $extra['recipient-ids'] ) && is_array( $extra['recipient-ids'] ) ) {
+			$userFactory = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory();
+			foreach ( $extra['recipient-ids'] as $id ) {
+				$u = $userFactory->newFromId( $id );
+				if ( $u && $u->isRegistered() ) {
+					$users[$id] = $u;
+				}
+			}
+		}
+		return true;
+	}
+
 	public static function onMCAMergeRequestSubmitted( $requestId, $user ) {
-		if ( !class_exists( '\EchoEvent' ) ) {
+		if ( !class_exists( '\EchoEvent' ) && !class_exists( '\MediaWiki\Extension\Echo\Model\Event' ) ) {
 			return;
 		}
 
@@ -57,75 +71,82 @@ class Hooks {
 			->where( [ 'ug_group' => $groupsWithPermission ] )
 			->fetchResultSet();
 
-		$targets = [];
-		$userFactory = $services->getUserFactory();
+		$targetIds = [];
 		foreach ( $res as $row ) {
-			$targets[] = $userFactory->newFromId( $row->ug_user );
+			$targetIds[] = (int)$row->ug_user;
 		}
 
-		if ( $targets ) {
-			\EchoEvent::create( [
-				'type' => 'mca-merge-request-submitted',
-				'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
-				'extra' => [
-					'request-id' => $requestId,
-					'user-id' => $user->getId(),
-				],
-				'agent' => $user,
-				'targets' => array_merge( $targets, [ $user ] ),
-			] );
-		}
+		$targetIds[] = $user->getId();
+
+		self::createEchoEvent( [
+			'type' => 'mca-merge-request-submitted',
+			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
+			'extra' => [
+				'request-id' => $requestId,
+				'user-id' => $user->getId(),
+				'recipient-ids' => array_unique( $targetIds ),
+			],
+			'agent' => $user,
+		] );
 	}
 
 	public static function onMCAMergeRequestResolved( $requestId, $user, $status ) {
-		if ( !class_exists( '\EchoEvent' ) || !$user ) {
+		if ( !$user ) {
 			return;
 		}
 
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 		$gender = $services->getUserOptionsLookup()->getOption( $user, 'gender' );
 
-		\EchoEvent::create( [
+		self::createEchoEvent( [
 			'type' => 'mca-merge-request-resolved',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 			'extra' => [
 				'request-id' => $requestId,
 				'status' => $status,
 				'gender' => $gender,
+				'recipient-ids' => [ $user->getId() ],
 			],
 			'agent' => $services->getUserFactory()->newAnonymous(),
-			'targets' => [ $user ],
 		] );
 	}
 
 	public static function onMCAAccountMerged( $user, $performer, $systems ) {
-		if ( !class_exists( '\EchoEvent' ) || !$user ) {
+		if ( !$user ) {
 			return;
 		}
 
-		\EchoEvent::create( [
+		self::createEchoEvent( [
 			'type' => 'mca-account-merged',
 			'extra' => [
 				'systems' => $systems,
+				'recipient-ids' => [ $user->getId() ],
 			],
 			'agent' => $performer,
-			'targets' => [ $user ],
 		] );
 	}
 
 	public static function onMCAAccountUnmerged( $user, $performer, $systems ) {
-		if ( !class_exists( '\EchoEvent' ) || !$user ) {
+		if ( !$user ) {
 			return;
 		}
 
-		\EchoEvent::create( [
+		self::createEchoEvent( [
 			'type' => 'mca-account-unmerged',
 			'extra' => [
 				'systems' => $systems,
+				'recipient-ids' => [ $user->getId() ],
 			],
 			'agent' => $performer,
-			'targets' => [ $user ],
 		] );
+	}
+
+	private static function createEchoEvent( array $params ) {
+		if ( class_exists( '\EchoEvent' ) ) {
+			\EchoEvent::create( $params );
+		} elseif ( class_exists( '\MediaWiki\Extension\Echo\Model\Event' ) ) {
+			\MediaWiki\Extension\Echo\Model\Event::create( $params );
+		}
 	}
 
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {

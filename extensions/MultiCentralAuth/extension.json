@@ -176,7 +176,8 @@
 		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
 		"MCAAccountMerged": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAAccountMerged",
 		"MCAAccountUnmerged": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAAccountUnmerged",
-		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput"
+		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput",
+		"EchoGetDefaultNotifiedUsers": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onEchoGetDefaultNotifiedUsers"
 	},
 	"EchoNotifications": {
 		"mca-merge-request-submitted": {
@@ -242,7 +243,9 @@
 	},
 	"DefaultUserOptions": {
 		"echo-subscriptions-email-mca-merge-request": true,
-		"echo-subscriptions-web-mca-merge-request": true
+		"echo-subscriptions-web-mca-merge-request": true,
+		"echo-subscriptions-email-mca-account-status": true,
+		"echo-subscriptions-web-mca-account-status": true
 	},
 	"AvailableRights": [
 		"ca-merge",
