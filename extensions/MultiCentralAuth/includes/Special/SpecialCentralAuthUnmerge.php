@@ -117,6 +117,8 @@ class SpecialCentralAuthUnmerge extends SpecialPage {
 			] );
 			$logId = $logEntry->insert();
 			$logEntry->publish( $logId );
+
+			\MediaWiki\MediaWikiServices::getInstance()->getHookContainer()->run( 'MCAAccountUnmerged', [ $targetUser, $this->getUser(), $farmName ] );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-unmerge-success', $localUserName )->parse() ) );

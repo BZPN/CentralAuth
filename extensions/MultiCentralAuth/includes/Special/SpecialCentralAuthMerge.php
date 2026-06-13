@@ -123,6 +123,8 @@ class SpecialCentralAuthMerge extends SpecialPage {
 			] );
 			$logId = $logEntry->insert();
 			$logEntry->publish( $logId );
+
+			\MediaWiki\MediaWikiServices::getInstance()->getHookContainer()->run( 'MCAAccountMerged', [ $targetUser, $this->getUser(), $systemList ] );
 		}
 
 		$this->getOutput()->addHTML( Html::successBox( $this->msg( 'mca-merge-success', $localUserName )->parse() ) );
