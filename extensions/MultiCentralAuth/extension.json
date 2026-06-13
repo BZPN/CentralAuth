@@ -176,7 +176,6 @@
 		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
 		"CheckCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onCheckCanLogin",
 		"UserCanLogin": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onUserCanLogin",
-		"AuthManagerLoginAuthenticateAudit": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onAuthManagerLoginAuthenticateAudit",
 		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput"
 	},
 	"EchoNotifications": {

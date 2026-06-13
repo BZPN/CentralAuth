@@ -474,8 +474,11 @@ class SpecialCentralAuth extends SpecialPage {
 			->fetchRow();
 
 		if ( $lock ) {
-			$this->getOutput()->addModuleStyles( [ 'oojs-ui.styles.icons-moderation', 'ext.multicentralauth.styles' ] );
-			$this->getOutput()->addModules( 'oojs-ui-core' );
+			$this->getOutput()->addModuleStyles( [
+				'oojs-ui.styles.icons-moderation',
+				'ext.multicentralauth.styles',
+				'mediawiki.ui.button'
+			] );
 
 			$logId = $dbr->newSelectQueryBuilder()
 				->select( 'log_id' )
@@ -507,11 +510,11 @@ class SpecialCentralAuth extends SpecialPage {
 				'page' => $user->getUserPage()->getPrefixedText()
 			] );
 
-			$button = new \OOUI\ButtonWidget( [
-				'label' => $this->msg( 'mca-view-full-log' )->text(),
+			$button = Html::element( 'a', [
+				'class' => 'mw-ui-button mw-ui-progressive',
 				'href' => $logLink,
-				'flags' => [ 'progressive' ]
-			] );
+				'role' => 'button'
+			], $this->msg( 'mca-view-full-log' )->text() );
 
 			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
