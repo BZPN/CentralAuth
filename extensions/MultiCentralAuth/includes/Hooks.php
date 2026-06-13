@@ -99,9 +99,6 @@ class Hooks {
 	}
 
 	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
-		// This hook can be called with different signatures in different MW versions.
-		// In MW 1.35+, the third parameter is usually a StatusValue or Status object.
-		// However, some versions pass it by reference.
 		if ( !$user->isRegistered() ) {
 			return;
 		}
@@ -128,7 +125,11 @@ class Hooks {
 				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
 			}
 
-			$canLogin->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			if ( is_object( $canLogin ) && method_exists( $canLogin, 'fatal' ) ) {
+				$canLogin->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			} else {
+				$canLogin = \Status::newFatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
+			}
 			return false;
 		}
 	}
@@ -173,37 +174,6 @@ class Hooks {
 		return true;
 	}
 
-	public static function onAuthManagerLoginAuthenticateAudit( $status, $user, $authRequests, $authBackends ) {
-		if ( !$user || !$user->isRegistered() ) {
-			return;
-		}
-
-		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
-		$dbr = $dbProvider->getReplicaDatabase();
-
-		$lock = $dbr->newSelectQueryBuilder()
-			->select( '*' )
-			->from( 'mca_locks' )
-			->where( [ 'mcl_user_id' => $user->getId() ] )
-			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
-			->fetchRow();
-
-		if ( $lock ) {
-			$expiry = $lock->mcl_expiry;
-			$context = \MediaWiki\Context\RequestContext::getMain();
-			$lang = \MediaWiki\MediaWikiServices::getInstance()->getLanguageFactory()->getLanguage(
-				$context->getLanguage()->getCode()
-			);
-			if ( $expiry === 'infinity' ) {
-				$formattedExpiry = wfMessage( 'infiniteblock' )->inLanguage( $lang )->text();
-			} else {
-				$formattedExpiry = $lang->userTimeAndDate( $expiry, $context->getUser() );
-			}
-
-			$status->fatal( 'mca-lock-blocked-login', $lock->mcl_reason, $formattedExpiry );
-		}
-	}
-
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {
 		// $user can be a Title or a User object depending on version
 		$targetName = ( $user instanceof \MediaWiki\User\User ) ? $user->getName() : $user->getText();
@@ -225,8 +195,11 @@ class Hooks {
 
 		if ( $lock ) {
 			$out = $sp->getOutput();
-			$out->addModuleStyles( [ 'oojs-ui.styles.icons-moderation', 'ext.multicentralauth.styles' ] );
-			$out->addModules( 'oojs-ui-core' );
+			$out->addModuleStyles( [
+				'oojs-ui.styles.icons-moderation',
+				'ext.multicentralauth.styles',
+				'mediawiki.ui.button'
+			] );
 
 			$dbr = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 			$logId = $dbr->newSelectQueryBuilder()
@@ -259,11 +232,11 @@ class Hooks {
 				'page' => $targetUser->getUserPage()->getPrefixedText()
 			] );
 
-			$button = new \OOUI\ButtonWidget( [
-				'label' => wfMessage( 'mca-view-full-log' )->text(),
+			$button = Html::element( 'a', [
+				'class' => 'mw-ui-button mw-ui-progressive',
 				'href' => $logLink,
-				'flags' => [ 'progressive' ]
-			] );
+				'role' => 'button'
+			], wfMessage( 'mca-view-full-log' )->text() );
 
 			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
