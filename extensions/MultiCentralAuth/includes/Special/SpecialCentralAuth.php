@@ -510,18 +510,16 @@ class SpecialCentralAuth extends SpecialPage {
 				'page' => $user->getUserPage()->getPrefixedText()
 			] );
 
-			$button = Html::element( 'a', [
-				'class' => 'mw-ui-button mw-ui-progressive',
+			$link = Html::element( 'a', [
 				'href' => $logLink,
-				'role' => 'button'
 			], $this->msg( 'mca-view-full-log' )->text() );
 
-			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
+			$this->getOutput()->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mw-message-box-success mca-global-lock-notice-box-green' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
-				Html::rawElement( 'div', [],
+				Html::rawElement( 'div', [ 'class' => 'mw-message-box-content' ],
 					Html::rawElement( 'div', [], $msg ) .
 					$logEntryHtml .
-					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $button )
+					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $link )
 				)
 			) );
 		}

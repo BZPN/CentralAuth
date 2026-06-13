@@ -99,17 +99,14 @@ class Hooks {
 	}
 
 	public static function onCheckCanLogin( $user, $authBackend, &$canLogin ) {
-		if ( !$user->isRegistered() ) {
-			return;
-		}
-
 		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
 		$dbr = $dbProvider->getReplicaDatabase();
 
 		$lock = $dbr->newSelectQueryBuilder()
-			->select( '*' )
+			->select( [ 'mcl_reason', 'mcl_expiry' ] )
 			->from( 'mca_locks' )
-			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->join( 'user', null, 'mcl_user_id = user_id' )
+			->where( [ 'user_name' => $user->getName() ] )
 			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
 			->fetchRow();
 
@@ -141,17 +138,14 @@ class Hooks {
 	 * @return bool
 	 */
 	public static function onUserCanLogin( $user, $authRequests, $status ) {
-		if ( !$user->isRegistered() ) {
-			return true;
-		}
-
 		$dbProvider = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider();
 		$dbr = $dbProvider->getReplicaDatabase();
 
 		$lock = $dbr->newSelectQueryBuilder()
-			->select( '*' )
+			->select( [ 'mcl_reason', 'mcl_expiry' ] )
 			->from( 'mca_locks' )
-			->where( [ 'mcl_user_id' => $user->getId() ] )
+			->join( 'user', null, 'mcl_user_id = user_id' )
+			->where( [ 'user_name' => $user->getName() ] )
 			->andWhere( 'mcl_expiry > ' . $dbr->addQuotes( $dbr->timestamp() ) . ' OR mcl_expiry = ' . $dbr->addQuotes( 'infinity' ) )
 			->fetchRow();
 
@@ -232,18 +226,16 @@ class Hooks {
 				'page' => $targetUser->getUserPage()->getPrefixedText()
 			] );
 
-			$button = Html::element( 'a', [
-				'class' => 'mw-ui-button mw-ui-progressive',
+			$link = Html::element( 'a', [
 				'href' => $logLink,
-				'role' => 'button'
 			], wfMessage( 'mca-view-full-log' )->text() );
 
 			$out->addHTML( Html::rawElement( 'div', [ 'class' => 'mw-message-box mca-global-lock-notice-box-green' ],
 				Html::element( 'span', [ 'class' => 'mw-message-box-icon oo-ui-icon-error' ] ) .
-				Html::rawElement( 'div', [],
+				Html::rawElement( 'div', [ 'class' => 'mw-message-box-content' ],
 					Html::rawElement( 'div', [], $msg ) .
 					$logEntryHtml .
-					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $button )
+					Html::rawElement( 'div', [ 'style' => 'margin-top: 0.5em;' ], $link )
 				)
 			) );
 		}
