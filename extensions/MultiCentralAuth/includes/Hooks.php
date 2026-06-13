@@ -29,16 +29,13 @@ class Hooks {
 	}
 
 	public static function onMCAMergeRequestSubmitted( $requestId, $user ) {
-		if ( !class_exists( '\EchoEvent' ) ) {
-			return;
-		}
-
+		$services = \MediaWiki\MediaWikiServices::getInstance();
 		// Find users with ca-merge permission
-		$dbr = \MediaWiki\MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+		$dbr = $services->getConnectionProvider()->getReplicaDatabase();
 
 		// Find all groups that have the 'ca-merge' permission
 		$groupsWithPermission = [];
-		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
+		$config = $services->getMainConfig();
 		$groupPermissions = $config->get( \MediaWiki\MainConfigNames::GroupPermissions );
 		foreach ( $groupPermissions as $group => $permissions ) {
 			if ( isset( $permissions['ca-merge'] ) && $permissions['ca-merge'] ) {
@@ -57,45 +54,77 @@ class Hooks {
 			->fetchResultSet();
 
 		$targets = [];
-		$userFactory = \MediaWiki\MediaWikiServices::getInstance()->getUserFactory();
+		$userFactory = $services->getUserFactory();
 		foreach ( $res as $row ) {
 			$targets[] = $userFactory->newFromId( $row->ug_user );
 		}
 
 		if ( $targets ) {
-			\EchoEvent::create( [
-				'type' => 'mca-merge-request-submitted',
-				'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
-				'extra' => [
-					'request-id' => $requestId,
-					'user-id' => $user->getId(),
-				],
-				'agent' => $user,
-				'targets' => array_merge( $targets, [ $user ] ),
-			] );
+			$title = \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" );
+			$info = [
+				'request-id' => $requestId,
+				'user-id' => $user->getId(),
+			];
+			$recipients = array_merge( $targets, [ $user ] );
+
+			$services->getNotificationService()->notify(
+				new \MediaWiki\Notifications\WikiNotification( 'mca-merge-request-submitted', $title, $user, $info ),
+				$recipients
+			);
 		}
 	}
 
 	public static function onMCAMergeRequestResolved( $requestId, $user, $status ) {
-		if ( !class_exists( '\EchoEvent' ) || !$user ) {
+		if ( !$user ) {
 			return;
 		}
 
-		$gender = \MediaWiki\MediaWikiServices::getInstance()
-			->getUserOptionsLookup()
-			->getOption( $user, 'gender' );
+		$services = \MediaWiki\MediaWikiServices::getInstance();
+		$gender = $services->getUserOptionsLookup()->getOption( $user, 'gender' );
 
-		\EchoEvent::create( [
-			'type' => 'mca-merge-request-resolved',
-			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
-			'extra' => [
-				'request-id' => $requestId,
-				'status' => $status,
-				'gender' => $gender,
-			],
-			'agent' => \MediaWiki\MediaWikiServices::getInstance()->getUserFactory()->newAnonymous(),
-			'targets' => [ $user ],
-		] );
+		$title = \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" );
+		$info = [
+			'request-id' => $requestId,
+			'status' => $status,
+			'gender' => $gender,
+		];
+
+		$services->getNotificationService()->notify(
+			new \MediaWiki\Notifications\WikiNotification( 'mca-merge-request-resolved', $title, null, $info ),
+			[ $user ]
+		);
+	}
+
+	public static function onMCAAccountMerged( $user, $performer, $systems ) {
+		if ( !$user ) {
+			return;
+		}
+
+		$services = \MediaWiki\MediaWikiServices::getInstance();
+		$info = [
+			'systems' => $systems,
+		];
+
+		$services->getNotificationService()->notify(
+			new \MediaWiki\Notifications\WikiNotification( 'mca-account-merged', null, $performer, $info ),
+			[ $user ]
+		);
+	}
+
+	public static function onMCAAccountUnmerged( $user, $performer, $systems ) {
+		if ( !$user ) {
+			return;
+		}
+
+		$services = \MediaWiki\MediaWikiServices::getInstance();
+		$info = [
+			'systems' => $systems,
+		];
+
+		$services->getNotificationService()->notify(
+			new \MediaWiki\Notifications\WikiNotification( 'mca-account-unmerged', null, $performer, $info ),
+			[ $user ]
+		);
 	}
 
 	public static function onSpecialContributionsBeforeMainOutput( $id, $user, $sp ) {

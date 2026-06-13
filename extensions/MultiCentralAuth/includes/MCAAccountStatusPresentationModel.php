@@ -1,0 +1,41 @@
+<?php
+
+namespace MediaWiki\Extension\MultiCentralAuth;
+
+use MediaWiki\Extension\Echo\PresentationModel\EchoEventPresentationModel;
+
+class MCAAccountStatusPresentationModel extends EchoEventPresentationModel {
+
+	public function getIconType() {
+		return 'mca-icon';
+	}
+
+	public function getPrimaryLink() {
+		return [
+			'url' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' )->getFullURL(),
+			'label' => $this->msg( 'mca-notification-link' )->text(),
+		];
+	}
+
+	public function getHeaderMessage() {
+		$type = $this->event->getType();
+		$systems = $this->event->getExtraParam( 'systems' );
+		if ( $type === 'mca-account-merged' ) {
+			$msg = $this->getMessageWithAgent( 'mca-notification-header-merged' );
+		} else {
+			$msg = $this->getMessageWithAgent( 'mca-notification-header-unmerged' );
+		}
+		$msg->params( $systems );
+		return $msg;
+	}
+
+	public function getBodyMessage() {
+		$systems = $this->event->getExtraParam( 'systems' );
+		if ( $systems ) {
+			$msg = new \MediaWiki\Message\RawMessage( '$1' );
+			$msg->plaintextParams( $systems );
+			return $msg;
+		}
+		return false;
+	}
+}
