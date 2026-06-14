@@ -7,7 +7,10 @@
 	"license-name": "GPL-2.0-or-later",
 	"type": "specialpage",
 	"requires": {
-		"MediaWiki": ">= 1.45.1"
+		"MediaWiki": ">= 1.45.1",
+		"extensions": {
+			"Echo": "*"
+		}
 	},
 	"GroupPermissions": {
 		"user": {
