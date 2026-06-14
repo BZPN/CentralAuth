@@ -74,7 +74,12 @@ class Hooks {
 			return;
 		}
 
-		\MediaWiki\Extension\Echo\Model\Event::create( [
+		$echoEventClass = self::getEchoEventClass();
+		if ( !$echoEventClass ) {
+			return;
+		}
+
+		$echoEventClass::create( [
 			'type' => 'mca-merge-request-submitted',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 			'agent' => $user,
@@ -92,7 +97,12 @@ class Hooks {
 
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
-		\MediaWiki\Extension\Echo\Model\Event::create( [
+		$echoEventClass = self::getEchoEventClass();
+		if ( !$echoEventClass ) {
+			return;
+		}
+
+		$echoEventClass::create( [
 			'type' => 'mca-merge-request-resolved',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 			'agent' => $performer ?? $services->getUserFactory()->newAnonymous(),
@@ -110,7 +120,12 @@ class Hooks {
 
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
-		\MediaWiki\Extension\Echo\Model\Event::create( [
+		$echoEventClass = self::getEchoEventClass();
+		if ( !$echoEventClass ) {
+			return;
+		}
+
+		$echoEventClass::create( [
 			'type' => 'mca-account-merged',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 			'agent' => $performer,
@@ -127,7 +142,12 @@ class Hooks {
 
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
-		\MediaWiki\Extension\Echo\Model\Event::create( [
+		$echoEventClass = self::getEchoEventClass();
+		if ( !$echoEventClass ) {
+			return;
+		}
+
+		$echoEventClass::create( [
 			'type' => 'mca-account-unmerged',
 			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 			'agent' => $performer,
@@ -217,5 +237,18 @@ class Hooks {
 				)
 			) );
 		}
+	}
+
+	/**
+	 * @return string|null The class name to use for Echo events, or null if none is available.
+	 */
+	private static function getEchoEventClass() {
+		if ( class_exists( '\MediaWiki\Extension\Echo\Model\Event' ) ) {
+			return '\MediaWiki\Extension\Echo\Model\Event';
+		}
+		if ( class_exists( '\EchoEvent' ) ) {
+			return '\EchoEvent';
+		}
+		return null;
 	}
 }
