@@ -105,6 +105,7 @@
 	"mca-category-account-status-tooltip": "Powiadomienia o zmianach statusu Twojego konta uniwersalnego (łączenie i rozłączanie).",
 	"mca-log-per-request": "Łączenie kont CentralAuth zgodnie z wnioskiem [[Special:CAMergeRequestQueue/view/$1|$1]]",
 	"echo-category-title-mca-merge-request": "Wnioski o połączenie CentralAuth",
+	"mca-category-tooltip-mca-merge-request": "Powiadomienia o nowych wnioskach o połączenie kont CentralAuth oraz zmianach w Twoich własnych wnioskach.",
 	"mca-comment": "Komentarz",
 	"mca-error-comment-required": "Komentarz jest wymagany.",
 	"mca-request-username": "Twoja nazwa użytkownika",

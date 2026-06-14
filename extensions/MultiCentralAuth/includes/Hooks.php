@@ -75,7 +75,7 @@ class Hooks {
 		}
 
 		$services->getNotificationService()->notify(
-			new \MediaWiki\Notifications\WikiNotification(
+			new \MediaWiki\Notification\WikiNotification(
 				'mca-merge-request-submitted',
 				\MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 				$user,
@@ -84,7 +84,7 @@ class Hooks {
 					'user-id' => $user->getId(),
 				]
 			),
-			new \MediaWiki\Notifications\RecipientSet( $recipients )
+			new \MediaWiki\Notification\RecipientSet( $recipients )
 		);
 	}
 
@@ -96,7 +96,7 @@ class Hooks {
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
 		$services->getNotificationService()->notify(
-			new \MediaWiki\Notifications\WikiNotification(
+			new \MediaWiki\Notification\WikiNotification(
 				'mca-merge-request-resolved',
 				\MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CAMergeRequestQueue', "view/$requestId" ),
 				$performer ?? $services->getUserFactory()->newAnonymous(),
@@ -105,7 +105,7 @@ class Hooks {
 					'status' => $status,
 				]
 			),
-			new \MediaWiki\Notifications\RecipientSet( [ $user ] )
+			new \MediaWiki\Notification\RecipientSet( [ $user ] )
 		);
 	}
 
@@ -117,7 +117,7 @@ class Hooks {
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
 		$services->getNotificationService()->notify(
-			new \MediaWiki\Notifications\WikiNotification(
+			new \MediaWiki\Notification\WikiNotification(
 				'mca-account-merged',
 				\MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 				$performer,
@@ -125,7 +125,7 @@ class Hooks {
 					'systems' => $systems,
 				]
 			),
-			new \MediaWiki\Notifications\RecipientSet( [ $user ] )
+			new \MediaWiki\Notification\RecipientSet( [ $user ] )
 		);
 	}
 
@@ -137,7 +137,7 @@ class Hooks {
 		$services = \MediaWiki\MediaWikiServices::getInstance();
 
 		$services->getNotificationService()->notify(
-			new \MediaWiki\Notifications\WikiNotification(
+			new \MediaWiki\Notification\WikiNotification(
 				'mca-account-unmerged',
 				\MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 				$performer,
@@ -145,7 +145,7 @@ class Hooks {
 					'systems' => $systems,
 				]
 			),
-			new \MediaWiki\Notifications\RecipientSet( [ $user ] )
+			new \MediaWiki\Notification\RecipientSet( [ $user ] )
 		);
 	}
 
