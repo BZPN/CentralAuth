@@ -223,7 +223,7 @@ class SpecialCAMergeRequestQueue extends SpecialPage {
 			], [ 'mmr_id' => $row->mmr_id ], __METHOD__ );
 
 			$requester = $this->userFactory->newFromId( $row->mmr_user_id );
-			\MediaWiki\MediaWikiServices::getInstance()->getHookContainer()->run( 'MCAMergeRequestResolved', [ $row->mmr_id, $requester, $data['status'] ] );
+			\MediaWiki\MediaWikiServices::getInstance()->getHookContainer()->run( 'MCAMergeRequestResolved', [ $row->mmr_id, $requester, $data['status'], $this->getUser() ] );
 
 			if ( $data['status'] === 'done' ) {
 				$user = $this->userFactory->newFromId( $row->mmr_user_id );
