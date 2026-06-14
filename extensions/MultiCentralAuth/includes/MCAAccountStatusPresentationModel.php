@@ -5,7 +5,7 @@ namespace MediaWiki\Extension\MultiCentralAuth;
 class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 
 	public function canRender() {
-		return true;
+		return $this->event->getExtraParam( 'systems' ) !== null;
 	}
 
 	public function getIconType() {
@@ -23,6 +23,7 @@ class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 	public function getSecondaryLinks() {
 		return [ $this->getAgentLink() ];
 	}
+
 
 	public function getHeaderMessage() {
 		$type = $this->event->getType();

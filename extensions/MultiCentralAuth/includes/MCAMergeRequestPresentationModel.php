@@ -24,6 +24,7 @@ class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 		return [ $this->getAgentLink() ];
 	}
 
+
 	public function getHeaderMessage() {
 		$type = $this->event->getType();
 		if ( $type === 'mca-merge-request-submitted' ) {
