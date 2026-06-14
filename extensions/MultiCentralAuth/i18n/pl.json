@@ -100,6 +100,7 @@
 	"mca-request-status-rejected": "odrzucony",
 	"mca-notification-header-merged": "Twoje konto CentralAuth zostało połączone z $3",
 	"mca-notification-header-unmerged": "Twoje konto CentralAuth zostało rozłączone z $3",
+	"mca-notification-body-plain": "$1",
 	"mca-notification-body": "ID wniosku: $1",
 	"mca-category-account-status": "Zmiany statusu konta CentralAuth",
 	"mca-category-account-status-tooltip": "Powiadomienia o zmianach statusu Twojego konta uniwersalnego (łączenie i rozłączanie).",

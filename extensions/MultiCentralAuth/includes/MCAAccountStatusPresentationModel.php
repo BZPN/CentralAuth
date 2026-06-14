@@ -40,9 +40,7 @@ class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 	public function getBodyMessage() {
 		$systems = $this->event->getExtraParam( 'systems' );
 		if ( $systems ) {
-			$msg = new \MediaWiki\Message\RawMessage( '$1' );
-			$msg->plaintextParams( $systems );
-			return $msg;
+			return $this->msg( 'mca-notification-body-plain' )->plaintextParams( $systems );
 		}
 		return false;
 	}
