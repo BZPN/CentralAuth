@@ -2,7 +2,7 @@
 
 namespace MediaWiki\Extension\MultiCentralAuth;
 
-class MCAMergeRequestPresentationModel extends \EchoEventPresentationModel {
+class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 
 	public function getIconType() {
 		return 'mca-icon';

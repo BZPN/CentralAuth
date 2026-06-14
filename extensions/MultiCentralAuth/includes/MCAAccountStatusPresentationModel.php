@@ -2,7 +2,13 @@
 
 namespace MediaWiki\Extension\MultiCentralAuth;
 
-class MCAAccountStatusPresentationModel extends \EchoEventPresentationModel {
+if ( class_exists( '\MediaWiki\Extension\Echo\PresentationModel\EchoEventPresentationModel' ) ) {
+	abstract class ResilientPresentationModel extends \MediaWiki\Extension\Echo\PresentationModel\EchoEventPresentationModel {}
+} else {
+	abstract class ResilientPresentationModel extends \EchoEventPresentationModel {}
+}
+
+class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 
 	public function getIconType() {
 		return 'mca-icon';
