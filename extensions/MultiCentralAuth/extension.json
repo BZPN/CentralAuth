@@ -179,7 +179,8 @@
 		"MCAMergeRequestResolved": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAMergeRequestResolved",
 		"MCAAccountMerged": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAAccountMerged",
 		"MCAAccountUnmerged": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onMCAAccountUnmerged",
-		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput"
+		"SpecialContributionsBeforeMainOutput": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onSpecialContributionsBeforeMainOutput",
+		"EchoGetDefaultNotifiedUsers": "MediaWiki\\Extension\\MultiCentralAuth\\Hooks::onEchoGetDefaultNotifiedUsers"
 	},
 	"attributes": {
 		"Echo": {
