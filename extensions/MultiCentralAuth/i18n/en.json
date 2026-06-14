@@ -110,6 +110,7 @@
 	"mca-request-status-rejected": "rejected",
 	"mca-notification-header-merged": "Your CentralAuth account has been merged with $3",
 	"mca-notification-header-unmerged": "Your CentralAuth account has been unmerged from $3",
+	"mca-notification-header-unmerged-all": "All of your CentralAuth accounts have been unmerged",
 	"mca-notification-body-plain": "$1",
 	"mca-notification-body": "Request ID: $1",
 	"mca-category-account-status": "CentralAuth account status changes",

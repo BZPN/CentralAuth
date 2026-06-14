@@ -231,6 +231,21 @@
 			"NotificationIcons": {
 				"mca-icon": {
 					"path": "MultiCentralAuth/resources/icons/merged-primary.png"
+				},
+				"mca-icon-new": {
+					"path": "MultiCentralAuth/resources/icons/new.png"
+				},
+				"mca-icon-merged": {
+					"path": "MultiCentralAuth/resources/icons/merged.png"
+				},
+				"mca-icon-unmerged": {
+					"path": "MultiCentralAuth/resources/icons/unmerged.png"
+				},
+				"mca-icon-rejected": {
+					"path": "MultiCentralAuth/resources/icons/rejected.png"
+				},
+				"mca-icon-approved": {
+					"path": "MultiCentralAuth/resources/icons/approved.png"
 				}
 			}
 		}
