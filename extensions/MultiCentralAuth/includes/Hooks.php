@@ -90,13 +90,12 @@ class Hooks {
 		] );
 	}
 
-	public static function onMCAMergeRequestResolved( $requestId, $user, $status ) {
+	public static function onMCAMergeRequestResolved( $requestId, $user, $status, $performer = null ) {
 		if ( !$user ) {
 			return;
 		}
 
 		$services = \MediaWiki\MediaWikiServices::getInstance();
-		$gender = $services->getUserOptionsLookup()->getOption( $user, 'gender' );
 
 		self::createEchoEvent( [
 			'type' => 'mca-merge-request-resolved',
@@ -104,10 +103,9 @@ class Hooks {
 			'extra' => [
 				'request-id' => $requestId,
 				'status' => $status,
-				'gender' => $gender,
 				'recipient-ids' => [ $user->getId() ],
 			],
-			'agent' => $services->getUserFactory()->newAnonymous(),
+			'agent' => $performer ?? $services->getUserFactory()->newAnonymous(),
 		] );
 	}
 
@@ -118,6 +116,7 @@ class Hooks {
 
 		self::createEchoEvent( [
 			'type' => 'mca-account-merged',
+			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 			'extra' => [
 				'systems' => $systems,
 				'recipient-ids' => [ $user->getId() ],
@@ -133,6 +132,7 @@ class Hooks {
 
 		self::createEchoEvent( [
 			'type' => 'mca-account-unmerged',
+			'title' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
 			'extra' => [
 				'systems' => $systems,
 				'recipient-ids' => [ $user->getId() ],

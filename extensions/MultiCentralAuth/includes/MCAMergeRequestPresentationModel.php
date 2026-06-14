@@ -21,7 +21,9 @@ class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 			return $this->getMessageWithAgent( 'mca-notification-header-submitted' );
 		}
 		$msg = $this->getMessageWithAgent( 'mca-notification-header-resolved' );
-		$msg->params( $this->event->getExtraParam( 'status' ) );
+		$status = $this->event->getExtraParam( 'status' );
+		// $1 agent name, $2 agent gender, $3 status
+		$msg->params( $this->msg( "mca-request-status-$status" ) );
 		return $msg;
 	}
 
