@@ -4,15 +4,24 @@ namespace MediaWiki\Extension\MultiCentralAuth;
 
 class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 
+	public function canRender() {
+		return (bool)$this->event->getTitle();
+	}
+
 	public function getIconType() {
 		return 'mca-icon';
 	}
 
 	public function getPrimaryLink() {
-		return [
-			'url' => $this->event->getTitle()->getFullURL(),
-			'label' => $this->msg( 'mca-notification-link' )->text(),
-		];
+		return $this->getPageLink(
+			$this->event->getTitle(),
+			'',
+			true
+		);
+	}
+
+	public function getSecondaryLinks() {
+		return [ $this->getAgentLink() ];
 	}
 
 	public function getHeaderMessage() {
@@ -30,7 +39,9 @@ class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 	public function getBodyMessage() {
 		$requestId = $this->event->getExtraParam( 'request-id' );
 		if ( $requestId ) {
-			return $this->msg( 'mca-notification-body', $requestId );
+			$msg = $this->msg( 'mca-notification-body' );
+			$msg->params( $requestId );
+			return $msg;
 		}
 		return false;
 	}

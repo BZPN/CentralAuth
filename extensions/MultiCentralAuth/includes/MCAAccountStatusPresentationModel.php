@@ -4,15 +4,24 @@ namespace MediaWiki\Extension\MultiCentralAuth;
 
 class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 
+	public function canRender() {
+		return true;
+	}
+
 	public function getIconType() {
 		return 'mca-icon';
 	}
 
 	public function getPrimaryLink() {
-		return [
-			'url' => \MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' )->getFullURL(),
-			'label' => $this->msg( 'mca-notification-link' )->text(),
-		];
+		return $this->getPageLink(
+			\MediaWiki\SpecialPage\SpecialPage::getTitleFor( 'CentralAuth' ),
+			'',
+			true
+		);
+	}
+
+	public function getSecondaryLinks() {
+		return [ $this->getAgentLink() ];
 	}
 
 	public function getHeaderMessage() {
