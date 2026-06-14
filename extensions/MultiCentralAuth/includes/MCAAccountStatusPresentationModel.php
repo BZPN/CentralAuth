@@ -9,7 +9,11 @@ class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 	}
 
 	public function getIconType() {
-		return 'mca-icon';
+		$type = $this->event->getType();
+		if ( $type === 'mca-account-merged' ) {
+			return 'mca-icon-merged';
+		}
+		return 'mca-icon-unmerged';
 	}
 
 	public function getPrimaryLink() {
@@ -30,10 +34,15 @@ class MCAAccountStatusPresentationModel extends ResilientPresentationModel {
 		$systems = $this->event->getExtraParam( 'systems' );
 		if ( $type === 'mca-account-merged' ) {
 			$msg = $this->getMessageWithAgent( 'mca-notification-header-merged' );
+			$msg->params( $systems );
 		} else {
-			$msg = $this->getMessageWithAgent( 'mca-notification-header-unmerged' );
+			if ( $systems === 'All' ) {
+				$msg = $this->getMessageWithAgent( 'mca-notification-header-unmerged-all' );
+			} else {
+				$msg = $this->getMessageWithAgent( 'mca-notification-header-unmerged' );
+				$msg->params( $systems );
+			}
 		}
-		$msg->params( $systems );
 		return $msg;
 	}
 

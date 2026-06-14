@@ -9,7 +9,15 @@ class MCAMergeRequestPresentationModel extends ResilientPresentationModel {
 	}
 
 	public function getIconType() {
-		return 'mca-icon';
+		$type = $this->event->getType();
+		if ( $type === 'mca-merge-request-submitted' ) {
+			return 'mca-icon-new';
+		}
+		$status = $this->event->getExtraParam( 'status' );
+		if ( $status === 'done' ) {
+			return 'mca-icon-approved';
+		}
+		return 'mca-icon-rejected';
 	}
 
 	public function getPrimaryLink() {
